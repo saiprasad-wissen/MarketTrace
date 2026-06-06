@@ -46,10 +46,10 @@ graph TD
 - Docker Desktop (for PostgreSQL)
 
 ### 1. Database Setup
-Spin up the PostgreSQL database using Docker Compose:
-```bash
-docker-compose up -d
-```
+1. Open **pgAdmin** and connect to your local PostgreSQL server.
+2. Right-click on **Databases** > **Create** > **Database...**
+3. Name the database `markettrace` and click **Save**.
+4. *(Optional)* Ensure your database user is `postgres` with the password `abc123`, or update the `DATABASE_URL` in your `.env` file to match your local credentials.
 
 ### 2. Backend Setup
 ```bash
