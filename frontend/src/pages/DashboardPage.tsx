@@ -106,6 +106,17 @@ export function DashboardPage() {
   const filteredCases = selectedSymbol ? cases.filter(c => c.symbol === selectedSymbol) : cases
   const filteredContextEvents = selectedSymbol ? contextEvents.filter(c => !c.symbol || c.symbol === selectedSymbol) : contextEvents
 
+  // Dynamic counts for metrics and funnel
+  const dynTrades = selectedSymbol ? filteredTrades.length : activeInvestigation.total_trades
+  const dynAlerts = selectedSymbol ? filteredAlerts.length : activeInvestigation.total_alerts
+  const dynCases = selectedSymbol ? filteredCases.length : cases.length
+  const dynEscalated = selectedSymbol 
+    ? filteredCases.filter(c => c.status === 'Escalated').length 
+    : cases.filter(c => c.status === 'Escalated').length
+  const dynTraders = selectedSymbol 
+    ? new Set(filteredAlerts.map(a => a.trader_id)).size 
+    : activeInvestigation.suspicious_traders
+
   // ─── No Investigation State ─────────────────────────────────────────────────
 
   if (!activeInvestigation) {
@@ -197,9 +208,13 @@ export function DashboardPage() {
 
       {/* Executive Metrics */}
       <ExecutiveMetrics 
-        investigation={activeInvestigation} 
+        trades={dynTrades}
+        alerts={dynAlerts}
+        cases={dynCases}
+        escalated={dynEscalated}
+        suspiciousTraders={dynTraders}
         stocksMonitored={availableSymbols.length}
-        contextEventsCount={contextEvents.length}
+        contextEventsCount={filteredContextEvents.length}
       />
 
       {/* Investigation Funnel + Alert Distribution */}
@@ -210,10 +225,10 @@ export function DashboardPage() {
           </div>
           <div className="card-body">
             <InvestigationFunnel
-              trades={activeInvestigation.total_trades}
-              alerts={activeInvestigation.total_alerts}
-              cases={activeInvestigation.total_cases}
-              escalated={activeInvestigation.escalated_cases}
+              trades={dynTrades}
+              alerts={dynAlerts}
+              cases={dynCases}
+              escalated={dynEscalated}
             />
           </div>
         </div>
@@ -241,19 +256,13 @@ export function DashboardPage() {
       {filteredTrades.length > 0 && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <div className="card">
-            <div className="card-header">
-              <h3 className="text-sm font-semibold text-slate-700">Price Activity</h3>
-            </div>
-            <div className="card-body pt-2">
+            <div className="card-body pt-4">
               <PriceVolumeChart trades={filteredTrades} symbol={selectedSymbol} />
             </div>
           </div>
 
           <div className="card">
-            <div className="card-header">
-              <h3 className="text-sm font-semibold text-slate-700">Order Activity</h3>
-            </div>
-            <div className="card-body pt-2">
+            <div className="card-body pt-4">
               <OrdersPerMinuteChart trades={filteredTrades} symbol={selectedSymbol} />
             </div>
           </div>
@@ -264,19 +273,13 @@ export function DashboardPage() {
       {filteredAlerts.length > 0 && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <div className="card">
-            <div className="card-header">
-              <h3 className="text-sm font-semibold text-slate-700">Cancellation Activity by Trader</h3>
-            </div>
-            <div className="card-body pt-2">
+            <div className="card-body pt-4">
               <CancellationChart trades={filteredTrades} symbol={selectedSymbol} />
             </div>
           </div>
 
           <div className="card">
-            <div className="card-header">
-              <h3 className="text-sm font-semibold text-slate-700">Trader × Pattern Risk Heatmap</h3>
-            </div>
-            <div className="card-body pt-2">
+            <div className="card-body pt-4">
               <TraderRiskHeatmap alerts={filteredAlerts} />
             </div>
           </div>
@@ -286,11 +289,7 @@ export function DashboardPage() {
       {/* Trader Network Graph */}
       {filteredAlerts.length > 0 && (
         <div className="card">
-          <div className="card-header">
-            <h3 className="text-sm font-semibold text-slate-700">Trader Network Graph</h3>
-            <p className="text-xs text-slate-400">Node size = risk score · Edge = shared symbol · Click to trace</p>
-          </div>
-          <div className="card-body">
+          <div className="card-body pt-4">
             <TraderNetworkGraph alerts={filteredAlerts} />
           </div>
         </div>

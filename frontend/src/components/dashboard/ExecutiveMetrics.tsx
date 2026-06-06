@@ -8,7 +8,11 @@ import type { Investigation } from '@/types'
 import { cn, formatNumber, riskScoreColor } from '@/lib/utils'
 
 interface Props {
-  investigation: Investigation
+  trades: number
+  alerts: number
+  cases: number
+  escalated: number
+  suspiciousTraders: number
   stocksMonitored: number
   contextEventsCount: number
 }
@@ -78,11 +82,11 @@ function MetricCard({ label, value, icon: Icon, color, bgColor, suffix = '', dec
   )
 }
 
-export function ExecutiveMetrics({ investigation, stocksMonitored, contextEventsCount }: Props) {
+export function ExecutiveMetrics({ trades, alerts, cases, escalated, suspiciousTraders, stocksMonitored, contextEventsCount }: Props) {
   const metrics: MetricCardProps[] = [
     {
       label: 'Total Trades',
-      value: investigation.total_trades,
+      value: trades,
       icon: Activity,
       color: '#1a56db',
       bgColor: 'bg-blue-50',
@@ -106,7 +110,7 @@ export function ExecutiveMetrics({ investigation, stocksMonitored, contextEvents
     },
     {
       label: 'Detected Alerts',
-      value: investigation.total_alerts,
+      value: alerts,
       icon: AlertOctagon,
       color: '#ea580c',
       bgColor: 'bg-orange-50',
@@ -114,7 +118,7 @@ export function ExecutiveMetrics({ investigation, stocksMonitored, contextEvents
     },
     {
       label: 'Cases Created',
-      value: investigation.total_cases,
+      value: cases,
       icon: Briefcase,
       color: '#be123c',
       bgColor: 'bg-rose-50',
@@ -122,7 +126,7 @@ export function ExecutiveMetrics({ investigation, stocksMonitored, contextEvents
     },
     {
       label: 'Escalated Cases',
-      value: investigation.escalated_cases,
+      value: escalated,
       icon: TrendingUp,
       color: '#dc2626',
       bgColor: 'bg-red-50',
@@ -130,7 +134,7 @@ export function ExecutiveMetrics({ investigation, stocksMonitored, contextEvents
     },
     {
       label: 'Suspicious Traders',
-      value: investigation.suspicious_traders,
+      value: suspiciousTraders,
       icon: Users,
       color: '#b45309',
       bgColor: 'bg-amber-50',
