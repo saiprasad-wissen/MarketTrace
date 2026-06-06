@@ -1,0 +1,9 @@
+symbol,company,sector,exchange
+NVDA,NVIDIA Corporation,Technology,NASDAQ
+AAPL,Apple Inc,Technology,NASDAQ
+TSLA,Tesla Inc,Automotive,NASDAQ
+MSFT,Microsoft Corporation,Technology,NASDAQ
+HDFCBANK,HDFC Bank,Banking,NSE
+RELIANCE,Reliance Industries,Conglomerate,NSE
+INFY,Infosys Ltd,IT Services,NSE
+TCS,Tata Consultancy Services,IT Services,NSE
