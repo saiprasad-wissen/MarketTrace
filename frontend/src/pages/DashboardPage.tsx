@@ -213,8 +213,9 @@ export function DashboardPage() {
           </button>
           <button
             onClick={() => openReplay(filteredTrades, filteredAlerts, filteredContextEvents)}
-            className="btn-secondary text-xs gap-1.5">
-            <Zap className="w-3.5 h-3.5 text-amber-500" /> Replay
+            disabled={filteredTrades.length === 0 && filteredContextEvents.length === 0}
+            className="btn-secondary text-xs gap-1.5 disabled:opacity-50">
+            <Zap className={cn("w-3.5 h-3.5", (filteredTrades.length > 0 || filteredContextEvents.length > 0) ? "text-amber-500" : "text-slate-500")} /> Replay
           </button>
           <button
             onClick={() => { setAIContext('investigation', null); setAIPanelOpen(true) }}

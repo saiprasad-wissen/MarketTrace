@@ -167,7 +167,7 @@ export function ReplayEngine() {
 
           <div className="w-px h-4 bg-slate-700" />
 
-          <button onClick={play} disabled={isPlaying || isDone}
+          <button onClick={play} disabled={isPlaying || isDone || events.length === 0}
             className="p-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white disabled:opacity-40 transition-colors"
             title="Play">
             <Play className="w-4 h-4" />
