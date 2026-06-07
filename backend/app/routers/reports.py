@@ -14,6 +14,8 @@ from app.schemas import ReportCreate, ReportResponse, MessageResponse
 from fastapi.responses import FileResponse
 from app.services.pdf_generator import generate_reportlab_pdf
 from app.models.audit import AppSettings
+from app.models.user import User
+from app.services.auth_service import get_current_user
 
 router = APIRouter(prefix="/api/reports", tags=["reports"])
 
@@ -143,10 +145,10 @@ async def delete_report(report_id: uuid.UUID, db: AsyncSession = Depends(get_db)
 async def generate_dossier(
     trader_id: str,
     investigation_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
-    # Fetch DB setting for Groq key
-    result = await db.execute(select(AppSettings).where(AppSettings.key == "groq_api_key"))
+    result = await db.execute(select(AppSettings).where(AppSettings.key == "groq_api_key", AppSettings.user_id == str(current_user.id)))
     row = result.scalar_one_or_none()
     groq_api_key = row.value if row else None
     
@@ -195,11 +197,12 @@ async def generate_dossier(
 @router.get("/investigation-dossier", response_class=FileResponse)
 async def generate_investigation_dossier(
     investigation_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     from app.services.pdf_generator import generate_investigation_pdf
     
-    result = await db.execute(select(AppSettings).where(AppSettings.key == "groq_api_key"))
+    result = await db.execute(select(AppSettings).where(AppSettings.key == "groq_api_key", AppSettings.user_id == str(current_user.id)))
     row = result.scalar_one_or_none()
     groq_api_key = row.value if row else None
     

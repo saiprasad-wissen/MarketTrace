@@ -14,7 +14,13 @@ export function Header() {
     try {
       // Direct fetch to backend to get the PDF blob
       const baseUrl = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : '/api'
-      const response = await fetch(`${baseUrl}/reports/investigation-dossier?investigation_id=${activeInvestigation.id}`)
+      
+      const authStorage = localStorage.getItem('markettrace-auth')
+      const token = authStorage ? JSON.parse(authStorage).state?.token : null
+      
+      const response = await fetch(`${baseUrl}/reports/investigation-dossier?investigation_id=${activeInvestigation.id}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      })
       if (!response.ok) throw new Error('Failed to generate report')
       
       const blob = await response.blob()

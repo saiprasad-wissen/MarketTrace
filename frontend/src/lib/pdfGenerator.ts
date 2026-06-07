@@ -23,16 +23,31 @@ export async function generateTraderPdf(
 
   // 2. Trigger the download from the new ReportLab backend
   try {
-    const url = `/api/reports/dossier?trader_id=${encodeURIComponent(traderId)}&investigation_id=${encodeURIComponent(investigationId)}`
+    const baseUrl = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : '/api'
+    const url = `${baseUrl}/reports/dossier?trader_id=${encodeURIComponent(traderId)}&investigation_id=${encodeURIComponent(investigationId)}`
     
-    // Create an invisible anchor to trigger the download
+    const authStorage = localStorage.getItem('markettrace-auth')
+    const token = authStorage ? JSON.parse(authStorage).state?.token : null
+    
+    const response = await fetch(url, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    })
+    
+    if (!response.ok) {
+        throw new Error('Failed to download PDF')
+    }
+    
+    const blob = await response.blob()
+    const objectUrl = window.URL.createObjectURL(blob)
+    
     const a = document.createElement('a')
     a.style.display = 'none'
-    a.href = url
+    a.href = objectUrl
     a.download = `MarketTrace_Dossier_${traderId}.pdf`
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
+    window.URL.revokeObjectURL(objectUrl)
     
   } catch (e) {
     console.error('Failed to generate PDF', e)
