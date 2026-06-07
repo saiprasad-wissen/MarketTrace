@@ -3,12 +3,13 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   LayoutDashboard, Search, FolderOpen, ClipboardList,
   FileText, Settings, Plus, ChevronRight, MoreHorizontal,
-  Archive, Trash2, Copy, Pencil, AlertTriangle, ShieldAlert, BarChart2
+  Archive, Trash2, Copy, Pencil, AlertTriangle, ShieldAlert, BarChart2, LogOut
 } from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
 import { investigationsApi } from '@/services/api'
 import { useState } from 'react'
 import { cn, timeAgo } from '@/lib/utils'
+import { useAuthStore } from '@/store/useAuthStore'
 
 const NAV_ITEMS = [
   { to: '/dashboard',      icon: LayoutDashboard, label: 'Dashboard' },
@@ -21,7 +22,8 @@ const NAV_ITEMS = [
 ]
 
 export function Sidebar() {
-  const { investigations, activeInvestigation, setActiveInvestigation, setWizardOpen, removeInvestigation, recentVisited } = useAppStore()
+  const { investigations, activeInvestigation, setActiveInvestigation, setWizardOpen, removeInvestigation, recentVisited, clearStore } = useAppStore()
+  const { user, logout } = useAuthStore()
   const navigate = useNavigate()
   const [contextMenu, setContextMenu] = useState<{ id: string; x: number; y: number } | null>(null)
   const [renamingId, setRenamingId] = useState<string | null>(null)
@@ -160,8 +162,24 @@ export function Sidebar() {
         </div>
 
         {/* Footer */}
-        <div className="px-4 py-3 border-t border-white/10">
-          <p className="text-white/20 text-[10px] text-center">MarketTrace v1.0 · Enterprise</p>
+        <div className="px-4 py-3 border-t border-white/10 flex flex-col gap-2">
+          {user && (
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 overflow-hidden">
+                <div className="w-6 h-6 rounded-full bg-primary-600 flex items-center justify-center text-white text-[10px] font-bold shrink-0">
+                  {user.name.charAt(0)}
+                </div>
+                <div className="truncate">
+                  <p className="text-white text-xs font-medium truncate">{user.name}</p>
+                  <p className="text-white/40 text-[9px] truncate">{user.email}</p>
+                </div>
+              </div>
+              <button onClick={() => { clearStore(); logout(); }} className="p-1.5 hover:bg-white/10 rounded-md text-white/50 hover:text-red-400 transition-colors">
+                <LogOut className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+          <p className="text-white/20 text-[10px] text-center mt-1">MarketTrace v1.0 · Enterprise</p>
         </div>
       </aside>
 

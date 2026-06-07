@@ -41,8 +41,14 @@ export function DashboardPage() {
       setInvestigations(activeInvs)
       
       const store = useAppStore.getState()
-      if (store.activeInvestigation && !activeInvs.find(i => i.id === store.activeInvestigation?.id)) {
-        store.setActiveInvestigation(null)
+      const stillExists = store.activeInvestigation && activeInvs.find(i => i.id === store.activeInvestigation?.id)
+      
+      if (!stillExists) {
+        if (activeInvs.length > 0) {
+          store.setActiveInvestigation(activeInvs[0])
+        } else {
+          store.setActiveInvestigation(null)
+        }
       }
     }).catch(() => {})
   }, [])

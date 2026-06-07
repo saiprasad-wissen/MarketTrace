@@ -6,6 +6,42 @@ from pydantic import BaseModel, Field
 
 
 # ---------------------------------------------------------------------------
+# Auth Schemas
+# ---------------------------------------------------------------------------
+class UserResponse(BaseModel):
+    id: str
+    name: str
+    email: str
+    role: str = "Analyst"
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str
+    user: UserResponse
+
+class UserRegister(BaseModel):
+    name: str
+    email: str
+    password: str
+    org: Optional[str] = None
+
+class UserLogin(BaseModel):
+    email: str
+    password: str
+
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+class VerifyOTPRequest(BaseModel):
+    email: str
+    otp: str
+
+class ResetPasswordRequest(BaseModel):
+    email: str
+    otp: str
+    new_password: str
+
+# ---------------------------------------------------------------------------
 # Profile Schemas
 # ---------------------------------------------------------------------------
 

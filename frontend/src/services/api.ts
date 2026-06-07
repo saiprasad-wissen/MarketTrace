@@ -9,6 +9,34 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 })
 
+// Inject JWT Token
+api.interceptors.request.use((config) => {
+  const authStorage = localStorage.getItem('markettrace-auth')
+  if (authStorage) {
+    try {
+      const parsed = JSON.parse(authStorage)
+      const token = parsed.state?.token
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`
+      }
+    } catch (e) {
+      console.error("Failed to parse auth token", e)
+    }
+  }
+  return config
+})
+
+// ─── Auth ────────────────────────────────────────────────────────────────────
+
+export const authApi = {
+  register: (data: any) => api.post('/auth/register', data).then(r => r.data),
+  login: (data: any) => api.post('/auth/login', data).then(r => r.data),
+  forgotPassword: (email: string) => api.post('/auth/forgot-password', { email }).then(r => r.data),
+  verifyOtp: (email: string, otp: string) => api.post('/auth/verify-otp', { email, otp }).then(r => r.data),
+  resetPassword: (data: any) => api.post('/auth/reset-password', data).then(r => r.data),
+  getMe: () => api.get('/auth/me').then(r => r.data),
+}
+
 // ─── Profiles ────────────────────────────────────────────────────────────────
 
 export const profilesApi = {

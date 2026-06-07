@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 
 from app.config import get_settings
 from app.database import create_tables
-from app.routers import profiles, investigations, trades, alerts, cases, reports, ai, settings as settings_router
+from app.routers import profiles, investigations, trades, alerts, cases, reports, ai, settings as settings_router, auth
 
 settings = get_settings()
 
@@ -34,6 +34,7 @@ app.add_middleware(
 )
 
 # Register routers
+app.include_router(auth.router)
 app.include_router(profiles.router)
 app.include_router(investigations.router)
 app.include_router(trades.router)

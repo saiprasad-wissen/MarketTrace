@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from app.models.case import Case
     from app.models.report import Report
     from app.models.ai import AIConversation
+    from app.models.user import User
 
 
 class Investigation(Base):
@@ -21,6 +22,7 @@ class Investigation(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     profile_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("profiles.id"), nullable=False)
+    user_id: Mapped[str] = mapped_column(String, ForeignKey("users.id"), nullable=True) # Optional for backward compatibility during hackathon
     status: Mapped[str] = mapped_column(String(50), default="processing")
     # processing | ready | archived
 
@@ -43,3 +45,4 @@ class Investigation(Base):
     cases: Mapped[List["Case"]] = relationship("Case", back_populates="investigation", cascade="all, delete-orphan")
     reports: Mapped[List["Report"]] = relationship("Report", back_populates="investigation", cascade="all, delete-orphan")
     ai_conversations: Mapped[List["AIConversation"]] = relationship("AIConversation", back_populates="investigation", cascade="all, delete-orphan")
+    user: Mapped[Optional["User"]] = relationship("User", back_populates="investigations")

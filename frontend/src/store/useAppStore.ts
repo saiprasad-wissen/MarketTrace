@@ -64,6 +64,8 @@ interface AppState {
   // Pinned Traders
   pinnedTraders: string[]
   togglePinnedTrader: (id: string) => void
+
+  clearStore: () => void
 }
 
 export const useAppStore = create<AppState>()(
@@ -142,6 +144,17 @@ export const useAppStore = create<AppState>()(
           ? s.pinnedTraders.filter(t => t !== id)
           : [...s.pinnedTraders, id]
       })),
+      clearStore: () => set({
+        activeInvestigation: null,
+        recentVisited: [],
+        selectedSymbol: null,
+        availableSymbols: [],
+        alerts: [],
+        cases: [],
+        traderRiskSummaries: [],
+        aiHistory: [],
+        investigations: []
+      })
     }),
     {
       name: 'markettrace-state',

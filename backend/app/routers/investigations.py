@@ -7,6 +7,7 @@ import uuid
 from app.database import get_db
 from app.models.investigation import Investigation
 from app.models.trade import Trade, ContextEvent
+from app.models.user import User
 from app.models.alert import Alert
 from app.models.case import Case
 from app.models.trader_analysis import TraderAnalysis
@@ -17,21 +18,29 @@ from app.engine.csv_parser import parse_trades_csv, parse_context_csv
 from app.engine.surveillance import TradeRecord, run_surveillance
 from app.engine.risk_scorer import compute_risk_scores
 from app.engine.case_builder import build_cases, get_investigation_stats
+from app.services.auth_service import get_current_user
 
 router = APIRouter(prefix="/api/investigations", tags=["investigations"])
 
 
 @router.get("", response_model=List[InvestigationResponse])
-async def list_investigations(db: AsyncSession = Depends(get_db)):
+async def list_investigations(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     result = await db.execute(
-        select(Investigation).where(Investigation.status != "deleted").order_by(Investigation.created_at.desc())
+        select(Investigation).where(Investigation.status != "deleted", Investigation.user_id == current_user.id).order_by(Investigation.created_at.desc())
     )
     return result.scalars().all()
 
 
 @router.post("", response_model=InvestigationResponse)
-async def create_investigation(data: InvestigationCreate, db: AsyncSession = Depends(get_db)):
-    inv = Investigation(name=data.name, profile_id=data.profile_id, status="created")
+async def create_investigation(
+    data: InvestigationCreate, 
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    inv = Investigation(name=data.name, profile_id=data.profile_id, user_id=current_user.id, status="created")
     db.add(inv)
     await db.flush()
     await db.refresh(inv)
@@ -39,19 +48,28 @@ async def create_investigation(data: InvestigationCreate, db: AsyncSession = Dep
 
 
 @router.get("/{inv_id}", response_model=InvestigationResponse)
-async def get_investigation(inv_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
+async def get_investigation(
+    inv_id: uuid.UUID, 
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     result = await db.execute(select(Investigation).where(Investigation.id == inv_id))
     inv = result.scalar_one_or_none()
-    if not inv:
+    if not inv or str(inv.user_id) != str(current_user.id):
         raise HTTPException(status_code=404, detail="Investigation not found")
     return inv
 
 
 @router.put("/{inv_id}", response_model=MessageResponse)
-async def update_investigation(inv_id: uuid.UUID, data: InvestigationUpdate, db: AsyncSession = Depends(get_db)):
+async def update_investigation(
+    inv_id: uuid.UUID, 
+    data: InvestigationUpdate, 
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     result = await db.execute(select(Investigation).where(Investigation.id == inv_id))
     inv = result.scalar_one_or_none()
-    if not inv:
+    if not inv or str(inv.user_id) != str(current_user.id):
         raise HTTPException(status_code=404, detail="Investigation not found")
     if data.name:
         inv.name = data.name
@@ -61,10 +79,14 @@ async def update_investigation(inv_id: uuid.UUID, data: InvestigationUpdate, db:
 
 
 @router.delete("/{inv_id}", response_model=MessageResponse)
-async def delete_investigation(inv_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
+async def delete_investigation(
+    inv_id: uuid.UUID, 
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     result = await db.execute(select(Investigation).where(Investigation.id == inv_id))
     inv = result.scalar_one_or_none()
-    if not inv:
+    if not inv or str(inv.user_id) != str(current_user.id):
         raise HTTPException(status_code=404, detail="Investigation not found")
     inv.status = "deleted"
 
@@ -81,7 +103,13 @@ async def upload_trades(
     inv_id: uuid.UUID,
     file: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
+    result = await db.execute(select(Investigation).where(Investigation.id == inv_id))
+    inv = result.scalar_one_or_none()
+    if not inv or str(inv.user_id) != str(current_user.id):
+        raise HTTPException(status_code=404, detail="Investigation not found")
+    
     content = await file.read()
     result = parse_trades_csv(content)
 

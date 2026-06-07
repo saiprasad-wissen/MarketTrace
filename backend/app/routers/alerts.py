@@ -6,6 +6,9 @@ import uuid
 
 from app.database import get_db
 from app.models.alert import Alert
+from app.models.investigation import Investigation
+from app.models.user import User
+from app.services.auth_service import get_current_user
 from app.schemas import AlertResponse
 
 router = APIRouter(prefix="/api/investigations", tags=["alerts"])
@@ -15,8 +18,10 @@ global_router = APIRouter(prefix="/api/alerts", tags=["alerts-global"])
 async def get_global_alerts(
     trader_id: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
-    q = select(Alert)
+    # For global alerts across all user investigations
+    q = select(Alert).join(Investigation, Alert.investigation_id == Investigation.id).where(Investigation.user_id == current_user.id)
     if trader_id:
         q = q.where(Alert.trader_id == trader_id)
     q = q.order_by(Alert.created_at.desc())
@@ -31,7 +36,14 @@ async def get_alerts(
     pattern: Optional[str] = Query(None),
     severity: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
+    # Verify investigation ownership
+    inv_result = await db.execute(select(Investigation).where(Investigation.id == inv_id))
+    inv = inv_result.scalar_one_or_none()
+    if not inv or str(inv.user_id) != str(current_user.id):
+        raise HTTPException(status_code=404, detail="Investigation not found")
+
     q = select(Alert).where(Alert.investigation_id == inv_id)
     if symbol:
         q = q.where(Alert.symbol == symbol.upper())

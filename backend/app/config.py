@@ -9,6 +9,13 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "markettrace-super-secret-key"
     ENVIRONMENT: str = "development"
     CORS_ORIGINS: str = "http://localhost:5173,http://localhost:3000"
+    
+    # SMTP Settings
+    SMTP_SERVER: str = "smtp.gmail.com"
+    SMTP_PORT: int = 587
+    SMTP_USERNAME: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_FROM_EMAIL: str = "noreply@markettrace.com"
 
     @property
     def cors_origins_list(self) -> List[str]:

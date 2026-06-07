@@ -8,6 +8,8 @@ from app.database import get_db
 from app.models.case import Case, CaseComment
 from app.models.investigation import Investigation
 from app.models.trade import Trade, ContextEvent
+from app.models.user import User
+from app.services.auth_service import get_current_user
 from app.schemas import CaseResponse, CaseUpdate, CaseCommentCreate, CaseCommentResponse, MessageResponse
 
 router = APIRouter(prefix="/api/cases", tags=["cases"])
@@ -20,8 +22,9 @@ async def list_cases(
     priority: Optional[str] = Query(None),
     trader_id: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
-    q = select(Case).join(Investigation, Case.investigation_id == Investigation.id).where(Investigation.status != "deleted")
+    q = select(Case).join(Investigation, Case.investigation_id == Investigation.id).where(Investigation.status != "deleted", Investigation.user_id == current_user.id)
     if investigation_id:
         q = q.where(Case.investigation_id == investigation_id)
     if status:
@@ -53,8 +56,14 @@ async def list_cases(
 
 
 @router.get("/{case_id}", response_model=CaseResponse)
-async def get_case(case_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Case).where(Case.id == case_id))
+async def get_case(
+    case_id: uuid.UUID, 
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    result = await db.execute(
+        select(Case).join(Investigation).where(Case.id == case_id, Investigation.user_id == current_user.id)
+    )
     case = result.scalar_one_or_none()
     if not case:
         raise HTTPException(status_code=404, detail="Case not found")
@@ -72,8 +81,15 @@ async def get_case(case_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
 
 
 @router.put("/{case_id}", response_model=MessageResponse)
-async def update_case(case_id: uuid.UUID, data: CaseUpdate, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Case).where(Case.id == case_id))
+async def update_case(
+    case_id: uuid.UUID, 
+    data: CaseUpdate, 
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    result = await db.execute(
+        select(Case).join(Investigation).where(Case.id == case_id, Investigation.user_id == current_user.id)
+    )
     case = result.scalar_one_or_none()
     if not case:
         raise HTTPException(status_code=404, detail="Case not found")
@@ -122,8 +138,15 @@ async def update_case(case_id: uuid.UUID, data: CaseUpdate, db: AsyncSession = D
 
 
 @router.post("/{case_id}/comments", response_model=CaseCommentResponse)
-async def add_comment(case_id: uuid.UUID, data: CaseCommentCreate, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Case).where(Case.id == case_id))
+async def add_comment(
+    case_id: uuid.UUID, 
+    data: CaseCommentCreate, 
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    result = await db.execute(
+        select(Case).join(Investigation).where(Case.id == case_id, Investigation.user_id == current_user.id)
+    )
     case = result.scalar_one_or_none()
     if not case:
         raise HTTPException(status_code=404, detail="Case not found")
