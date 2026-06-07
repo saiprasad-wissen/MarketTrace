@@ -11,8 +11,13 @@ settings = get_settings()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: create tables if they don't exist
-    await create_tables()
+    import asyncio
+    import logging
+    try:
+        # Wrap in a timeout to prevent deadlocks with Supabase pooler blocking Uvicorn startup
+        await asyncio.wait_for(create_tables(), timeout=5.0)
+    except Exception as e:
+        logging.warning(f"Could not run create_tables on startup (this is normal in production): {e}")
     yield
     # Shutdown: nothing to clean up
 
