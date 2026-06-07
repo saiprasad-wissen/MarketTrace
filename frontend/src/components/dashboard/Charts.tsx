@@ -1,7 +1,7 @@
 import {
   LineChart, Line, AreaChart, Area, BarChart, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, ReferenceLine,
+  PieChart, Pie, Cell, ReferenceLine, Brush
 } from 'recharts'
 import type { Trade, Alert } from '@/types'
 import { useMemo } from 'react'
@@ -168,7 +168,6 @@ export function PriceVolumeChart({ trades, symbol }: PriceChartProps) {
             dataKey="time"
             tick={{ fontSize: 10, fill: '#94a3b8' }}
             interval="preserveStartEnd"
-            label={{ value: 'Time (HH:MM)', position: 'insideBottomRight', offset: -4, fontSize: 9, fill: '#cbd5e1' }}
           />
           <YAxis
             tick={{ fontSize: 10, fill: '#94a3b8' }}
@@ -178,8 +177,20 @@ export function PriceVolumeChart({ trades, symbol }: PriceChartProps) {
           />
           <Tooltip content={<PriceTooltip />} />
           <Area type="monotone" dataKey="price" stroke="#1a56db" strokeWidth={2} fill="url(#priceGrad)" dot={false} activeDot={{ r: 5, fill: '#1a56db', strokeWidth: 2, stroke: '#fff' }} />
+          <Brush 
+            dataKey="time" 
+            height={24} 
+            stroke="#3b82f6" 
+            fill="#f8fafc" 
+            travellerWidth={8}
+            tickFormatter={() => ''}
+          />
         </AreaChart>
       </ResponsiveContainer>
+      <p className="text-[10px] text-slate-400 text-center mt-1.5 flex items-center justify-center gap-1.5">
+        <span className="w-2.5 h-1.5 rounded-sm bg-blue-400"></span>
+        Drag the slider to filter time range
+      </p>
     </div>
   )
 }
@@ -248,8 +259,20 @@ export function OrdersPerMinuteChart({ trades, symbol }: PriceChartProps) {
           {peak.time && <ReferenceLine x={peak.time} stroke="#f59e0b" strokeDasharray="4 3" label={{ value: 'PEAK', position: 'top', fontSize: 9, fill: '#f59e0b' }} />}
           <Tooltip content={<OrderTooltip />} />
           <Bar dataKey="count" fill="url(#orderGrad)" radius={[3, 3, 0, 0]} name="Orders" />
+          <Brush 
+            dataKey="time" 
+            height={24} 
+            stroke="#3b82f6" 
+            fill="#f8fafc" 
+            travellerWidth={8}
+            tickFormatter={() => ''}
+          />
         </BarChart>
       </ResponsiveContainer>
+      <p className="text-[10px] text-slate-400 text-center mt-1.5 flex items-center justify-center gap-1.5">
+        <span className="w-2.5 h-1.5 rounded-sm bg-blue-400"></span>
+        Drag the slider to filter time range
+      </p>
     </div>
   )
 }

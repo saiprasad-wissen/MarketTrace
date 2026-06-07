@@ -161,8 +161,8 @@
 
 /* Replay drawer */
 .replay-drawer {
-  @apply fixed bottom-0 left-[var(--sidebar-width)] right-0 bg-navy-800 
-         border-t border-slate-700 z-30 transition-transform duration-300;
+  @apply fixed bottom-0 left-[var(--sidebar-width)] right-0 bg-slate-900/95 backdrop-blur-md 
+         border-t border-slate-700/50 shadow-[0_-8px_30px_-10px_rgba(0,0,0,0.5)] z-30 transition-transform duration-300;
 }
 
 /* AI Panel */
