@@ -79,6 +79,8 @@ export const tradesApi = {
 export const alertsApi = {
   list: (invId: string, params?: { symbol?: string; trader_id?: string; pattern?: string; severity?: string }) =>
     api.get<Alert[]>(`/investigations/${invId}/alerts`, { params }).then(r => r.data),
+  toggleFalsePositive: (alertId: string, is_false_positive: boolean) =>
+    api.patch(`/alerts/${alertId}/false-positive`, { is_false_positive }).then(r => r.data),
 }
 
 // ─── Cases ────────────────────────────────────────────────────────────────────

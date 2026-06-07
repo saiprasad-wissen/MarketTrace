@@ -134,3 +134,31 @@ async def add_comment(case_id: uuid.UUID, data: CaseCommentCreate, db: AsyncSess
     return CaseCommentResponse(id=comment.id, author=comment.author, content=comment.content, created_at=comment.created_at)
 
 
+@router.post("/{case_id}/reasoning", response_model=MessageResponse)
+async def generate_case_reasoning(case_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(Case).where(Case.id == case_id))
+    case = result.scalar_one_or_none()
+    if not case:
+        raise HTTPException(status_code=404, detail="Case not found")
+        
+    context_events_result = await db.execute(select(ContextEvent).where(ContextEvent.investigation_id == case.investigation_id))
+    context_events = context_events_result.scalars().all()
+    
+    trades_result = await db.execute(select(Trade).where(Trade.trader_id == case.trader_id))
+    trades = trades_result.scalars().all()
+    
+    from app.models.alert import Alert
+    fp_result = await db.execute(select(Alert).where(Alert.is_false_positive == True))
+    false_positive_alerts = fp_result.scalars().all()
+    
+    from app.services.claude_service import generate_batch_case_reasoning
+    case_dict = {"case_id": str(case.id), "trader_id": case.trader_id, "symbol": case.symbol, "risk_score": case.risk_score, "patterns": case.patterns, "evidence": case.evidence}
+    
+    reasoning_dict = await generate_batch_case_reasoning([case_dict], trades, context_events, false_positive_alerts, db)
+    
+    if str(case.id) in reasoning_dict:
+        case.ai_analysis = reasoning_dict[str(case.id)]
+        await db.commit()
+        return MessageResponse(message="AI analysis generated")
+    
+    raise HTTPException(status_code=500, detail="Failed to generate AI analysis")

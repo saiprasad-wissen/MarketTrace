@@ -60,8 +60,11 @@ def compute_risk_scores(alerts: List[DetectedAlert]) -> Dict[str, TraderRiskProf
     Compute risk score for each trader based on their alerts.
     Returns a dict keyed by trader_id.
     """
+    # Filter out false positive alerts
+    valid_alerts = [a for a in alerts if not getattr(a, 'is_false_positive', False)]
+
     trader_alerts: Dict[str, List[DetectedAlert]] = defaultdict(list)
-    for alert in alerts:
+    for alert in valid_alerts:
         trader_alerts[alert.trader_id].append(alert)
 
     profiles: Dict[str, TraderRiskProfile] = {}

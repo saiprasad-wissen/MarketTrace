@@ -37,6 +37,7 @@ async def generate_batch_case_reasoning(
     cases_batch: List[Dict[str, Any]],
     trades: List[Trade],
     context_events: List[ContextEvent],
+    false_positive_alerts: List[Any],
     db: AsyncSession
 ) -> Dict[str, str]:
     """
@@ -60,13 +61,20 @@ async def generate_batch_case_reasoning(
         rel_trades = [t for t in trades if t.trader_id == c["trader_id"] and t.symbol == c["symbol"]][:20]
         trade_text = "\n".join([f"[{t.timestamp}] {t.side} {t.quantity} {t.symbol} @ {t.price} (Status: {t.status})" for t in rel_trades])
         
+        # Build false positive context for this specific trader
+        fp_patterns = [a.pattern for a in false_positive_alerts if a.trader_id == c["trader_id"]]
+        fp_text = ""
+        if fp_patterns:
+            unique_fps = list(set(fp_patterns))
+            fp_text = f"\nFALSE POSITIVE CONTEXT (HEAVILY WEIGHT THIS):\nNote: {len(fp_patterns)} similar alerts from this trader ({', '.join(unique_fps)}) were previously marked FALSE POSITIVE by compliance. If the current behavior matches these patterns exactly, you MUST explicitly state that this is likely benign behavior in your reasoning and lower the risk_level."
+
         prompt_cases.append(f"""
 CASE ID: {c.get('case_id')}
 Trader: {c.get('trader_id')}
 Symbol: {symbol}
 Risk Score: {c.get('risk_score')}
 Patterns Detected: {c.get('patterns')}
-Evidence Extract: {c.get('evidence')}
+Evidence Extract: {c.get('evidence')}{fp_text}
 Recent Trades (Sample):
 {trade_text}
 Market Context:
@@ -193,6 +201,7 @@ EXPECTED OUTPUT FORMAT (RAW JSON ONLY):
 async def generate_trader_profile_reasoning(
     trader_id: str,
     cases_summary: List[Dict[str, Any]],
+    false_positive_alerts: List[Any],
     db: AsyncSession
 ) -> str:
     """
@@ -206,6 +215,12 @@ async def generate_trader_profile_reasoning(
     for c in cases_summary:
         cases_text += f"- Symbol: {c.get('symbol')} | Risk: {c.get('risk_score')} | Patterns: {c.get('patterns')}\n"
 
+    fp_patterns = [a.pattern for a in false_positive_alerts if a.trader_id == trader_id]
+    fp_text = ""
+    if fp_patterns:
+        unique_fps = list(set(fp_patterns))
+        fp_text = f"\nFALSE POSITIVE CONTEXT (HEAVILY WEIGHT THIS):\nNote: {len(fp_patterns)} patterns ({', '.join(unique_fps)}) from this desk were previously marked FALSE POSITIVE by compliance. Acknowledge this mitigating factor explicitly when profiling the trader's behavior."
+
     prompt = f"""
 You are an expert Forensic Market Surveillance Analyst.
 Create a comprehensive 'Suspicious Trader Profile' report for the following trader based on the summarized cases flagged during the session.
@@ -214,7 +229,7 @@ Trader ID: {trader_id}
 Total Cases Flagged: {len(cases_summary)}
 
 Flagged Activity Summary:
-{cases_text}
+{cases_text}{fp_text}
 
 CRITICAL INSTRUCTIONS:
 - DO NOT write generic boilerplate sections (e.g., do NOT include 'Executive Summary', 'Risk Assessment', 'Recommendations', or 'Conclusion').

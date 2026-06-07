@@ -239,13 +239,17 @@ async def _run_engine_task(inv_id: uuid.UUID):
             # ---------------------------------------------------------
             context_events_result = await db.execute(select(ContextEvent).where(ContextEvent.investigation_id == inv_id))
             context_events = context_events_result.scalars().all()
+            
+            # Fetch False Positives for this profile
+            fp_result = await db.execute(select(Alert).where(Alert.is_false_positive == True))
+            false_positive_alerts = fp_result.scalars().all()
 
             case_dicts = [{"case_id": str(c.id), "trader_id": c.trader_id, "symbol": c.symbol, "risk_score": c.risk_score, "patterns": c.patterns, "evidence": c.evidence} for c in saved_cases]
             
             batch_size = 5
             for i in range(0, len(case_dicts), batch_size):
                 batch = case_dicts[i:i+batch_size]
-                reasoning_dict = await generate_batch_case_reasoning(batch, trade_rows, context_events, db)
+                reasoning_dict = await generate_batch_case_reasoning(batch, trade_rows, context_events, false_positive_alerts, db)
                 
                 for c in saved_cases:
                     cid = str(c.id)

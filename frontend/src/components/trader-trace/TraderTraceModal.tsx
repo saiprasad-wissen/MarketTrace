@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, ShieldAlert, Clock, TrendingUp, AlertOctagon, BookOpen, FileText, Bot } from 'lucide-react'
+import { X, ShieldAlert, Clock, TrendingUp, AlertOctagon, BookOpen, FileText, Bot, ThumbsDown, ThumbsUp } from 'lucide-react'
 import type { Alert, Trade, ContextEvent, ProfileTrader } from '@/types'
 import { cn, riskScoreColor, riskScoreClass, patternClass, patternColor, priorityClass, formatNumber } from '@/lib/utils'
 import { useAppStore } from '@/store/useAppStore'
@@ -87,6 +87,15 @@ export function TraderTraceModal({ traderId, investigationId, profileTraders = [
     setAIContext('trader', traderId)
     setAIPanelOpen(true)
     onClose()
+  }
+
+  const handleToggleFalsePositive = async (alertId: string, currentVal: boolean) => {
+    try {
+      await alertsApi.toggleFalsePositive(alertId, !currentVal)
+      setAlerts(alerts.map(a => a.id === alertId ? { ...a, is_false_positive: !currentVal } : a))
+    } catch (e) {
+      console.error('Failed to toggle false positive', e)
+    }
   }
 
   return (
@@ -180,9 +189,9 @@ export function TraderTraceModal({ traderId, investigationId, profileTraders = [
                       <motion.div key={alert.id}
                         initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: i * 0.05 }}
-                        className="border border-slate-200 rounded-xl overflow-hidden">
+                        className={cn("border rounded-xl overflow-hidden transition-all", alert.is_false_positive ? "border-slate-200 opacity-60 grayscale bg-slate-50" : "border-slate-200")}>
                         <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100"
-                          style={{ backgroundColor: patternColor(alert.pattern) + '10' }}>
+                          style={{ backgroundColor: alert.is_false_positive ? '#f8fafc' : patternColor(alert.pattern) + '10' }}>
                           <div className="flex items-center gap-2">
                             <span className={patternClass(alert.pattern)}>{alert.pattern}</span>
                             <span className="text-xs text-slate-500">·</span>
@@ -191,11 +200,28 @@ export function TraderTraceModal({ traderId, investigationId, profileTraders = [
                             </span>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className={cn('badge text-[10px]',
-                              alert.severity === 'CRITICAL' ? 'badge-critical' :
-                              alert.severity === 'HIGH' ? 'badge-high' : 'badge-medium'
-                            )}>{alert.severity}</span>
-                            <span className="text-[10px] text-slate-400">Confidence: {alert.confidence}</span>
+                            {alert.is_false_positive ? (
+                              <span className="badge badge-low">False Positive</span>
+                            ) : (
+                              <>
+                                <span className={cn('badge text-[10px]',
+                                  alert.severity === 'CRITICAL' ? 'badge-critical' :
+                                  alert.severity === 'HIGH' ? 'badge-high' : 'badge-medium'
+                                )}>{alert.severity}</span>
+                                <span className="text-[10px] text-slate-400">Confidence: {alert.confidence}</span>
+                              </>
+                            )}
+                            <button 
+                              onClick={() => handleToggleFalsePositive(alert.id, alert.is_false_positive)}
+                              className={cn("ml-2 p-1.5 rounded-md flex items-center gap-1 transition-colors border",
+                                alert.is_false_positive 
+                                  ? "bg-slate-200 text-slate-600 border-slate-300 hover:bg-slate-300"
+                                  : "bg-white text-slate-500 border-slate-200 hover:text-red-600 hover:bg-red-50 hover:border-red-200"
+                              )}
+                              title={alert.is_false_positive ? "Remove false positive mark" : "Mark as False Positive for AI learning"}
+                            >
+                              {alert.is_false_positive ? <ThumbsUp className="w-3 h-3" /> : <ThumbsDown className="w-3 h-3" />}
+                            </button>
                           </div>
                         </div>
                         <div className="px-4 py-3">
