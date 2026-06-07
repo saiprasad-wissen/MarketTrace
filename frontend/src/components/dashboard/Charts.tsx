@@ -5,7 +5,7 @@ import {
 } from 'recharts'
 import type { Trade, Alert } from '@/types'
 import { useMemo } from 'react'
-import { patternColor, riskScoreColor } from '@/lib/utils'
+import { cn, patternColor, riskScoreColor } from '@/lib/utils'
 import { useAppStore } from '@/store/useAppStore'
 import { TrendingUp, TrendingDown, AlertTriangle, Activity, BarChart2, XCircle, ArrowUpRight, Briefcase, ShieldAlert } from 'lucide-react'
 
@@ -29,18 +29,18 @@ function ChartHeader({ icon, title, subtitle, badge }: {
   badge?: { label: string; color: string; bg: string }
 }) {
   return (
-    <div className="flex items-start justify-between mb-3">
-      <div className="flex items-center gap-2">
-        <div className="w-7 h-7 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-500">
+    <div className="flex items-start justify-between mb-3 gap-2 min-w-0">
+      <div className="flex items-start gap-2 min-w-0">
+        <div className="w-7 h-7 shrink-0 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-500">
           {icon}
         </div>
-        <div>
+        <div className="min-w-0">
           <p className="text-xs font-bold text-slate-700 leading-tight">{title}</p>
           {subtitle && <p className="text-[10px] text-slate-400 leading-tight mt-0.5">{subtitle}</p>}
         </div>
       </div>
       {badge && (
-        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ color: badge.color, backgroundColor: badge.bg }}>
+        <span className="shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap" style={{ color: badge.color, backgroundColor: badge.bg }}>
           {badge.label}
         </span>
       )}
@@ -80,6 +80,9 @@ const OrderTooltip = ({ active, payload, label }: any) => {
     <div style={tooltipStyle} className="space-y-1">
       <p className="text-[10px] text-slate-400 font-medium">Time: {label}</p>
       <p className="text-sm font-bold text-blue-700">{payload[0]?.value} new orders</p>
+      {payload[0]?.payload?.symbols && (
+        <p className="text-[10px] text-slate-500 font-medium">Symbols: {payload[0].payload.symbols}</p>
+      )}
     </div>
   )
 }
@@ -100,7 +103,7 @@ const CancelTooltip = ({ active, payload }: any) => {
 interface PriceChartProps { trades: Trade[]; symbol?: string | null }
 
 export function PriceVolumeChart({ trades, symbol }: PriceChartProps) {
-  const { setAIContext, setAIPanelOpen } = useAppStore()
+  const { setAIContext, setAIPanelOpen, aiContextId } = useAppStore()
   const filtered = symbol ? trades.filter(t => t.symbol === symbol) : trades
 
   const { data, minPrice, maxPrice, trend } = useMemo(() => {
@@ -125,8 +128,15 @@ export function PriceVolumeChart({ trades, symbol }: PriceChartProps) {
 
   return (
     <div
-      onDoubleClick={() => { setAIContext('graph', 'Price Activity Chart'); setAIPanelOpen(true) }}
-      className="cursor-pointer"
+      onDoubleClick={() => {
+        if (aiContextId === 'Price Activity Chart') {
+          setAIContext('graph', null)
+        } else {
+          setAIContext('graph', 'Price Activity Chart')
+          setAIPanelOpen(true)
+        }
+      }}
+      className={cn("cursor-pointer rounded-xl transition-all duration-300", aiContextId === 'Price Activity Chart' ? "ring-2 ring-primary-500 ring-offset-4 ring-offset-white bg-primary-50/20" : "")}
     >
       <ChartHeader
         icon={<TrendingUp className="w-4 h-4" />}
@@ -198,18 +208,25 @@ export function PriceVolumeChart({ trades, symbol }: PriceChartProps) {
 // ─── Orders Per Minute ────────────────────────────────────────────────────────
 
 export function OrdersPerMinuteChart({ trades, symbol }: PriceChartProps) {
-  const { setAIContext, setAIPanelOpen } = useAppStore()
+  const { setAIContext, setAIPanelOpen, aiContextId } = useAppStore()
   const filtered = symbol ? trades.filter(t => t.symbol === symbol) : trades
 
   const { data, peak } = useMemo(() => {
-    const buckets: Record<string, number> = {}
+    const buckets: Record<string, { count: number, symbols: Record<string, number> }> = {}
     filtered.filter(t => t.status === 'NEW').forEach(t => {
       const min = t.timestamp.slice(0, 5)
-      buckets[min] = (buckets[min] || 0) + 1
+      if (!buckets[min]) buckets[min] = { count: 0, symbols: {} }
+      buckets[min].count += 1
+      buckets[min].symbols[t.symbol] = (buckets[min].symbols[t.symbol] || 0) + 1
     })
     const pts = Object.entries(buckets)
       .sort(([a], [b]) => a.localeCompare(b))
-      .map(([time, count]) => ({ time, count }))
+      .map(([time, data]) => {
+        const symbolStrs = Object.entries(data.symbols)
+          .sort((a, b) => b[1] - a[1])
+          .map(([sym, c]) => `${sym} (${c})`)
+        return { time, count: data.count, symbols: symbolStrs.join(', ') }
+      })
     const peak = pts.reduce((max, p) => p.count > max.count ? p : max, { time: '', count: 0 })
     return { data: pts, peak }
   }, [filtered])
@@ -220,8 +237,15 @@ export function OrdersPerMinuteChart({ trades, symbol }: PriceChartProps) {
 
   return (
     <div
-      onDoubleClick={() => { setAIContext('graph', 'Orders Per Minute Chart'); setAIPanelOpen(true) }}
-      className="cursor-pointer"
+      onDoubleClick={() => {
+        if (aiContextId === 'Orders Per Minute Chart') {
+          setAIContext('graph', null)
+        } else {
+          setAIContext('graph', 'Orders Per Minute Chart')
+          setAIPanelOpen(true)
+        }
+      }}
+      className={cn("cursor-pointer rounded-xl transition-all duration-300", aiContextId === 'Orders Per Minute Chart' ? "ring-2 ring-primary-500 ring-offset-4 ring-offset-white bg-primary-50/20" : "")}
     >
       <ChartHeader
         icon={<BarChart2 className="w-4 h-4" />}
@@ -280,7 +304,7 @@ export function OrdersPerMinuteChart({ trades, symbol }: PriceChartProps) {
 // ─── Cancellation Activity ────────────────────────────────────────────────────
 
 export function CancellationChart({ trades, symbol }: PriceChartProps) {
-  const { setAIContext, setAIPanelOpen } = useAppStore()
+  const { setAIContext, setAIPanelOpen, aiContextId } = useAppStore()
   const filtered = symbol ? trades.filter(t => t.symbol === symbol) : trades
 
   const { data, threshold } = useMemo(() => {
@@ -306,8 +330,15 @@ export function CancellationChart({ trades, symbol }: PriceChartProps) {
 
   return (
     <div
-      onDoubleClick={() => { setAIContext('graph', 'Cancellation Activity by Trader Chart'); setAIPanelOpen(true) }}
-      className="cursor-pointer"
+      onDoubleClick={() => {
+        if (aiContextId === 'Cancellation Activity by Trader Chart') {
+          setAIContext('graph', null)
+        } else {
+          setAIContext('graph', 'Cancellation Activity by Trader Chart')
+          setAIPanelOpen(true)
+        }
+      }}
+      className={cn("cursor-pointer rounded-xl transition-all duration-300", aiContextId === 'Cancellation Activity by Trader Chart' ? "ring-2 ring-primary-500 ring-offset-4 ring-offset-white bg-primary-50/20" : "")}
     >
       <ChartHeader
         icon={<XCircle className="w-4 h-4" />}
@@ -355,7 +386,7 @@ export function CancellationChart({ trades, symbol }: PriceChartProps) {
 interface AlertChartProps { alerts: Alert[] }
 
 export function AlertDistributionChart({ alerts }: AlertChartProps) {
-  const { setAIContext, setAIPanelOpen } = useAppStore()
+  const { setAIContext, setAIPanelOpen, aiContextId } = useAppStore()
 
   const data = useMemo(() => {
     const counts: Record<string, number> = {}
@@ -374,8 +405,15 @@ export function AlertDistributionChart({ alerts }: AlertChartProps) {
 
   return (
     <div
-      onDoubleClick={() => { setAIContext('graph', 'Alert Distribution Chart'); setAIPanelOpen(true) }}
-      className="cursor-pointer"
+      onDoubleClick={() => {
+        if (aiContextId === 'Alert Distribution Chart') {
+          setAIContext('graph', null)
+        } else {
+          setAIContext('graph', 'Alert Distribution Chart')
+          setAIPanelOpen(true)
+        }
+      }}
+      className={cn("cursor-pointer rounded-xl transition-all duration-300", aiContextId === 'Alert Distribution Chart' ? "ring-2 ring-primary-500 ring-offset-4 ring-offset-white bg-primary-50/20" : "")}
     >
       <ChartHeader
         icon={<AlertTriangle className="w-4 h-4" />}
@@ -478,7 +516,7 @@ const FUNNEL_STAGES_META = [
 ]
 
 export function InvestigationFunnel({ trades, alerts, cases, escalated }: FunnelProps) {
-  const { setAIContext, setAIPanelOpen } = useAppStore()
+  const { setAIContext, setAIPanelOpen, aiContextId } = useAppStore()
 
   const values = [trades, alerts, cases, escalated]
   const pcts = [
@@ -491,19 +529,26 @@ export function InvestigationFunnel({ trades, alerts, cases, escalated }: Funnel
 
   return (
     <div
-      onDoubleClick={() => { setAIContext('graph', 'Investigation Funnel'); setAIPanelOpen(true) }}
-      className="flex flex-col gap-2 py-1 cursor-pointer"
+      onDoubleClick={() => {
+        if (aiContextId === 'Investigation Funnel') {
+          setAIContext('graph', null)
+        } else {
+          setAIContext('graph', 'Investigation Funnel')
+          setAIPanelOpen(true)
+        }
+      }}
+      className={cn("flex flex-col gap-2 py-1 cursor-pointer rounded-xl transition-all duration-300", aiContextId === 'Investigation Funnel' ? "ring-2 ring-primary-500 ring-offset-4 ring-offset-white bg-primary-50/20" : "")}
     >
-      <div className="flex items-center gap-1.5 mb-1">
-        <Activity className="w-4 h-4 text-slate-400" />
-        <p className="text-xs font-bold text-slate-700">Investigation Funnel</p>
-        <p className="text-[10px] text-slate-400 ml-1">Trades → Escalation pipeline</p>
+      <div className="flex items-center gap-1.5 mb-2 min-w-0">
+        <Activity className="w-4 h-4 text-slate-400 shrink-0" />
+        <p className="text-xs font-bold text-slate-700 shrink-0">Investigation Funnel</p>
+        <p className="text-[10px] text-slate-400 ml-1 truncate">Trades → Escalation pipeline</p>
       </div>
 
       {FUNNEL_STAGES_META.map(({ label, color, iconBg, desc, Icon }, i) => (
         <div key={label} className="group relative">
-          <div className="flex items-center justify-between mb-1 px-1">
-            <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between mb-1 px-1 gap-2 min-w-0">
+            <div className="flex items-center gap-2 min-w-0">
               {/* Professional icon box instead of emoji */}
               <div
                 className="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0"
@@ -511,17 +556,17 @@ export function InvestigationFunnel({ trades, alerts, cases, escalated }: Funnel
               >
                 <Icon className="w-3.5 h-3.5" style={{ color }} />
               </div>
-              <div className="flex items-center gap-1.5 min-w-0">
-                <span className="text-xs font-bold text-slate-700 shrink-0">{label}</span>
-                <span className="text-[10px] text-slate-400 whitespace-nowrap">{desc}</span>
+              <div className="flex flex-col min-w-0">
+                <span className="text-xs font-bold text-slate-700 truncate">{label}</span>
+                <span className="text-[10px] text-slate-400 truncate leading-tight">{desc}</span>
               </div>
             </div>
-            <div className="text-right">
-              <span className="text-sm font-extrabold tabular-nums" style={{ color }}>
+            <div className="text-right shrink-0">
+              <span className="text-sm font-extrabold tabular-nums block leading-tight" style={{ color }}>
                 {values[i].toLocaleString()}
               </span>
               {i > 0 && (
-                <span className="text-[10px] text-slate-400 ml-1">
+                <span className="text-[10px] text-slate-400 block leading-tight mt-0.5">
                   ({pcts[i].toFixed(1)}%)
                 </span>
               )}
@@ -558,7 +603,7 @@ const PATTERNS_ORDER = [
 ]
 
 export function TraderRiskHeatmap({ alerts }: HeatmapProps) {
-  const { setAIContext, setAIPanelOpen } = useAppStore()
+  const { setAIContext, setAIPanelOpen, aiContextId } = useAppStore()
 
   const { traders, patterns, matrix, traderTotals } = useMemo(() => {
     const traderSet = new Set<string>()
@@ -596,13 +641,20 @@ export function TraderRiskHeatmap({ alerts }: HeatmapProps) {
 
   return (
     <div
-      onDoubleClick={() => { setAIContext('graph', 'Trader Risk Heatmap'); setAIPanelOpen(true) }}
-      className="cursor-pointer"
+      onDoubleClick={() => {
+        if (aiContextId === 'Trader Risk Heatmap') {
+          setAIContext('graph', null)
+        } else {
+          setAIContext('graph', 'Trader Risk Heatmap')
+          setAIPanelOpen(true)
+        }
+      }}
+      className={cn("cursor-pointer rounded-xl transition-all duration-300", aiContextId === 'Trader Risk Heatmap' ? "ring-2 ring-primary-500 ring-offset-4 ring-offset-white bg-primary-50/20" : "")}
     >
-      <div className="flex items-center gap-1.5 mb-3">
-        <AlertTriangle className="w-4 h-4 text-slate-400" />
-        <p className="text-xs font-bold text-slate-700">Trader × Pattern Risk Heatmap</p>
-        <p className="text-[10px] text-slate-400 ml-1">Darker = more alerts · Hover for details</p>
+      <div className="flex items-center gap-1.5 mb-3 min-w-0">
+        <AlertTriangle className="w-4 h-4 text-slate-400 shrink-0" />
+        <p className="text-xs font-bold text-slate-700 shrink-0">Trader × Pattern Risk Heatmap</p>
+        <p className="text-[10px] text-slate-400 ml-1 truncate">Darker = more alerts · Hover for details</p>
       </div>
 
       {/* Pattern color legend */}

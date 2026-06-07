@@ -19,7 +19,6 @@ export function Layout({ children }: LayoutProps) {
         style={{
           marginLeft: 'var(--sidebar-width)',
           marginTop: 'var(--header-height)',
-          marginRight: aiPanelOpen ? 'var(--ai-panel-width)' : '0',
         }}>
         <div className="p-6 min-h-[calc(100vh-var(--header-height))]">
           {children}

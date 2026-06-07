@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { RefreshCw, Zap, Bot } from 'lucide-react'
+import { RefreshCw, Zap, Bot, Sparkles } from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
+import { cn } from '@/lib/utils'
 import { investigationsApi, alertsApi, casesApi, tradesApi, profilesApi } from '@/services/api'
 import { ExecutiveMetrics } from '@/components/dashboard/ExecutiveMetrics'
 import { InvestigationQueue } from '@/components/dashboard/InvestigationQueue'
@@ -190,6 +191,12 @@ export function DashboardPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {/* Global AI Tip */}
+          <div className="hidden xl:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-violet-50 text-violet-700 border border-violet-100 mr-1 shadow-sm">
+            <Sparkles className="w-3.5 h-3.5 text-violet-500" />
+            <span className="text-[11px] font-bold">TIP: Double-click any chart to ask AI</span>
+          </div>
+
           <button onClick={refreshInv} className="btn-secondary text-xs gap-1.5">
             <RefreshCw className="w-3.5 h-3.5" /> Refresh
           </button>
@@ -220,10 +227,7 @@ export function DashboardPage() {
       {/* Investigation Funnel + Alert Distribution */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="card">
-          <div className="card-header">
-            <h3 className="text-sm font-semibold text-slate-700">Investigation Funnel</h3>
-          </div>
-          <div className="card-body">
+          <div className="card-body pt-4">
             <InvestigationFunnel
               trades={dynTrades}
               alerts={dynAlerts}
@@ -234,10 +238,7 @@ export function DashboardPage() {
         </div>
 
         <div className="card">
-          <div className="card-header">
-            <h3 className="text-sm font-semibold text-slate-700">Alert Distribution by Pattern</h3>
-          </div>
-          <div className="card-body">
+          <div className="card-body pt-4">
             <AlertDistributionChart alerts={filteredAlerts} />
           </div>
         </div>
@@ -255,13 +256,15 @@ export function DashboardPage() {
       {/* Price Chart + Volume */}
       {filteredTrades.length > 0 && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <div className="card">
-            <div className="card-body pt-4">
-              <PriceVolumeChart trades={filteredTrades} symbol={selectedSymbol} />
+          {selectedSymbol && (
+            <div className="card">
+              <div className="card-body pt-4">
+                <PriceVolumeChart trades={filteredTrades} symbol={selectedSymbol} />
+              </div>
             </div>
-          </div>
+          )}
 
-          <div className="card">
+          <div className={cn("card", !selectedSymbol ? "lg:col-span-2" : "")}>
             <div className="card-body pt-4">
               <OrdersPerMinuteChart trades={filteredTrades} symbol={selectedSymbol} />
             </div>

@@ -143,18 +143,6 @@ export function SettingsPage() {
                 </div>
               </div>
 
-              <div className="card">
-                <div className="card-header"><h3 className="font-semibold text-slate-800">Replay Engine Speed</h3></div>
-                <div className="card-body">
-                  <label className="label">Playback Multiplier</label>
-                  <select value={speed} onChange={e => setSpeed(Number(e.target.value))} className="select max-w-[200px]">
-                    <option value={1}>1x (Real-time)</option>
-                    <option value={2}>2x</option>
-                    <option value={5}>5x</option>
-                    <option value={10}>10x</option>
-                  </select>
-                </div>
-              </div>
             </div>
           )}
 

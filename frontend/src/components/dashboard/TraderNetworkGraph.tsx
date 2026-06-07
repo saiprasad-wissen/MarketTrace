@@ -7,7 +7,7 @@ import {
 import type { Node, Edge } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import type { Alert } from '@/types'
-import { riskScoreColor, patternColor } from '@/lib/utils'
+import { cn, riskScoreColor, patternColor } from '@/lib/utils'
 import { useAppStore } from '@/store/useAppStore'
 import { Users, Info } from 'lucide-react'
 
@@ -24,7 +24,7 @@ const RISK_LEGEND = [
 ]
 
 export function TraderNetworkGraph({ alerts }: Props) {
-  const { setTraceTrader, traderRiskSummaries } = useAppStore()
+  const { setTraceTrader, traderRiskSummaries, setAIContext, setAIPanelOpen, aiContextId } = useAppStore()
 
   // ─── Build graph data from alerts (reactive to filtered set) ─────────────────
   const { nodes: builtNodes, edges: builtEdges, traderCount, edgeCount } = useMemo(() => {
@@ -179,7 +179,17 @@ export function TraderNetworkGraph({ alerts }: Props) {
   }
 
   return (
-    <div className="space-y-3">
+    <div
+      className={cn("space-y-3 cursor-pointer rounded-xl transition-all duration-300", aiContextId === 'Trader Network Graph' ? "ring-2 ring-primary-500 ring-offset-4 ring-offset-white bg-primary-50/20" : "")}
+      onDoubleClick={() => {
+        if (aiContextId === 'Trader Network Graph') {
+          setAIContext('graph', null)
+        } else {
+          setAIContext('graph', 'Trader Network Graph')
+          setAIPanelOpen(true)
+        }
+      }}
+    >
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">

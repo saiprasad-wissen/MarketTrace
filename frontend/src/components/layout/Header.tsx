@@ -38,7 +38,7 @@ export function Header() {
       className="fixed top-0 bg-white border-b border-slate-200 z-20 flex items-center justify-between px-5 gap-4 shadow-sm"
       style={{
         left: 'var(--sidebar-width)',
-        right: aiPanelOpen ? 'var(--ai-panel-width)' : '0',
+        right: '0',
         height: 'var(--header-height)',
         transition: 'right 0.3s ease',
       }}>

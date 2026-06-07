@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence, useDragControls } from 'framer-motion'
 import { X, Bot, Send, Loader2, ChevronRight, Sparkles } from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
 import { aiApi } from '@/services/api'
@@ -27,6 +27,7 @@ export function AIInvestigatorPanel() {
   const [loading, setLoading] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const dragControls = useDragControls()
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -67,13 +68,20 @@ export function AIInvestigatorPanel() {
       {aiPanelOpen && (
         <motion.div
           className="ai-panel"
-          initial={{ x: 'var(--ai-panel-width)' }}
-          animate={{ x: 0 }}
-          exit={{ x: 'var(--ai-panel-width)' }}
-          transition={{ type: 'spring', stiffness: 300, damping: 30 }}>
+          drag
+          dragListener={false}
+          dragControls={dragControls}
+          dragMomentum={false}
+          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95, y: 20 }}
+          transition={{ type: 'spring', stiffness: 400, damping: 30 }}>
 
           {/* Header */}
-          <div className="px-4 py-3 border-b border-slate-200 bg-gradient-to-r from-violet-600 to-primary-700">
+          <div 
+            className="px-4 py-3 border-b border-slate-200 bg-gradient-to-r from-violet-600 to-primary-700 cursor-grab active:cursor-grabbing"
+            onPointerDown={(e) => dragControls.start(e)}
+          >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="w-7 h-7 bg-white/20 rounded-lg flex items-center justify-center">
@@ -84,19 +92,15 @@ export function AIInvestigatorPanel() {
                   <p className="text-white/60 text-[10px]">Investigation Copilot</p>
                 </div>
               </div>
-              <button onClick={() => setAIPanelOpen(false)}
+              <button onClick={() => {
+                setAIPanelOpen(false)
+                setAIContext('investigation', null)
+              }}
                 className="p-1.5 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-colors">
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            {/* Context badge */}
-            {contextLabel && (
-              <div className="mt-2 bg-white/10 rounded-lg px-3 py-1.5 flex items-center gap-2">
-                <Sparkles className="w-3 h-3 text-white/60 shrink-0" />
-                <p className="text-white/80 text-[11px] font-medium truncate">{contextLabel}</p>
-              </div>
-            )}
           </div>
 
           {/* Messages */}
@@ -153,21 +157,23 @@ export function AIInvestigatorPanel() {
           </div>
 
           {/* Quick Questions */}
-          <div className="px-3 py-2 border-t border-slate-100">
-            <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider mb-1.5">Quick Questions</p>
-            <div className="flex flex-col gap-1">
-              {QUICK_QUESTIONS.map(q => (
-                <button key={q}
-                  onClick={() => handleSend(q)}
-                  disabled={loading || !activeInvestigation}
-                  className="text-left text-xs text-primary-700 hover:bg-primary-50 px-2 py-1 rounded-lg 
-                             transition-colors flex items-center gap-1.5 disabled:opacity-40">
-                  <ChevronRight className="w-3 h-3 shrink-0" />
-                  {q}
-                </button>
-              ))}
+          {aiHistory.length === 0 && (
+            <div className="px-3 py-2 border-t border-slate-100">
+              <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider mb-1.5">Quick Questions</p>
+              <div className="flex flex-col gap-1">
+                {QUICK_QUESTIONS.map(q => (
+                  <button key={q}
+                    onClick={() => handleSend(q)}
+                    disabled={loading || !activeInvestigation}
+                    className="text-left text-xs text-primary-700 hover:bg-primary-50 px-2 py-1 rounded-lg 
+                               transition-colors flex items-center gap-1.5 disabled:opacity-40">
+                    <ChevronRight className="w-3 h-3 shrink-0" />
+                    {q}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Input */}
           <div className="px-3 py-3 border-t border-slate-200">
