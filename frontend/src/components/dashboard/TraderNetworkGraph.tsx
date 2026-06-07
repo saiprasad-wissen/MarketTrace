@@ -77,23 +77,53 @@ export function TraderNetworkGraph({ alerts }: Props) {
       })
     }
 
-    // ─── Edges: connect traders sharing symbols ────────────────────────────────
+    // ─── Build wash-trading-specific symbol sets per trader ───────────────────
+    // washSymbols: symbols where this trader has a "Wash Trading" alert (EDA Rule 4)
+    const washSymbolsMap = new Map<string, Set<string>>()
+    alerts.forEach(a => {
+      if (a.pattern === 'Wash Trading') {
+        if (!washSymbolsMap.has(a.trader_id)) washSymbolsMap.set(a.trader_id, new Set())
+        washSymbolsMap.get(a.trader_id)!.add(a.symbol)
+      }
+    })
+
+    // ─── Edges: prioritise wash-trading pairs, fall back to shared symbols ────
+    // Wash-trading edges connect traders who BOTH have Wash Trading alerts on the SAME symbol.
+    // This reveals coordinated artificial volume generation networks.
     const edges: Edge[] = []
     const seen = new Set<string>()
 
     traders.forEach(([id1, d1]) => {
       traders.forEach(([id2, d2]) => {
         if (id1 >= id2) return
-        const shared = [...d1.symbols].filter(s => d2.symbols.has(s))
-        if (!shared.length) return
         const key = `${id1}-${id2}`
         if (seen.has(key)) return
+
+        const washSymbols1 = washSymbolsMap.get(id1) ?? new Set<string>()
+        const washSymbols2 = washSymbolsMap.get(id2) ?? new Set<string>()
+
+        // Shared symbols where BOTH traders have wash-trading alerts
+        const sharedWash = [...washSymbols1].filter(s => washSymbols2.has(s))
+
+        // Shared symbols from any alert (for secondary context edges)
+        const sharedAll = [...d1.symbols].filter(s => d2.symbols.has(s))
+
+        if (!sharedAll.length) return
         seen.add(key)
 
+        const isWashEdge = sharedWash.length > 0
         const risk1 = d1.risk, risk2 = d2.risk
         const avgRisk = (risk1 + risk2) / 2
-        const strokeColor = riskScoreColor(avgRisk)
-        const strokeWidth = shared.length > 2 ? 3 : shared.length > 1 ? 2 : 1
+
+        // Wash-trading edges: purple/magenta (#a21caf); others: risk-score color, low opacity
+        const strokeColor = isWashEdge ? '#a21caf' : riskScoreColor(avgRisk)
+        const strokeWidth = isWashEdge ? (sharedWash.length > 1 ? 3 : 2.5) : (sharedAll.length > 2 ? 2 : 1)
+        const opacity = isWashEdge ? 0.80 : 0.35
+        const animated = isWashEdge || avgRisk >= 70
+
+        const label = isWashEdge
+          ? `⚠ Wash: ${sharedWash.length > 1 ? sharedWash.length + ' syms' : sharedWash[0]}`
+          : sharedAll.length > 1 ? `${sharedAll.length} symbols` : sharedAll[0]
 
         edges.push({
           id: key,
@@ -102,12 +132,17 @@ export function TraderNetworkGraph({ alerts }: Props) {
           style: {
             stroke: strokeColor,
             strokeWidth,
-            opacity: 0.55,
+            opacity,
+            strokeDasharray: isWashEdge ? undefined : '4 3',
           },
-          label: shared.length > 1 ? `${shared.length} symbols` : shared[0],
-          labelStyle: { fontSize: 8, fill: '#64748b', fontWeight: 600 },
-          labelBgStyle: { fill: '#ffffff', fillOpacity: 0.85 },
-          animated: avgRisk >= 70,
+          label,
+          labelStyle: {
+            fontSize: 8,
+            fill: isWashEdge ? '#86198f' : '#64748b',
+            fontWeight: isWashEdge ? 700 : 600,
+          },
+          labelBgStyle: { fill: isWashEdge ? '#fdf4ff' : '#ffffff', fillOpacity: 0.9 },
+          animated,
           markerEnd: { type: MarkerType.Arrow, color: strokeColor, width: 8, height: 8 },
         })
       })
@@ -150,7 +185,7 @@ export function TraderNetworkGraph({ alerts }: Props) {
         <div className="flex items-center gap-2">
           <Users className="w-4 h-4 text-slate-400" />
           <p className="text-xs font-bold text-slate-700">Trader Network Graph</p>
-          <p className="text-[10px] text-slate-400">· Node size = risk score · Edge = shared symbol · Click to trace</p>
+          <p className="text-[10px] text-slate-400">· Node size = risk score · Purple = wash trading link · Dashed = shared symbol · Click to trace</p>
         </div>
         <div className="flex items-center gap-3">
           <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-medium">
@@ -174,9 +209,15 @@ export function TraderNetworkGraph({ alerts }: Props) {
             <span className="text-[9px] text-slate-500 font-medium">{label}</span>
           </div>
         ))}
-        <div className="flex items-center gap-1 ml-auto">
-          <div className="w-6 h-px border-t-2 border-dashed border-orange-400" />
-          <span className="text-[9px] text-slate-400">Animated = high-risk link</span>
+        <div className="flex items-center gap-1 ml-auto flex-wrap gap-y-1">
+          <div className="flex items-center gap-1 mr-3">
+            <div className="w-6 h-0.5" style={{ backgroundColor: '#a21caf' }} />
+            <span className="text-[9px] text-slate-400">Wash trading link</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-6 h-px border-t border-dashed border-slate-400" />
+            <span className="text-[9px] text-slate-400">Shared symbol</span>
+          </div>
         </div>
       </div>
 
@@ -209,7 +250,7 @@ export function TraderNetworkGraph({ alerts }: Props) {
       <div className="flex items-center gap-2 px-1">
         <div className="flex-1 h-px bg-slate-100" />
         <span className="text-[10px] text-slate-400 font-medium px-2">
-          💡 Animated edges indicate high-risk trader pairs. Click any node to open Trace View.
+          🔴 Purple edges = wash trading network (EDA Rule 4: ≥90% buy/sell symmetry). Animated = high-risk pair. Click any node to trace.
         </span>
         <div className="flex-1 h-px bg-slate-100" />
       </div>

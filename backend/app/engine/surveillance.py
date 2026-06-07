@@ -51,10 +51,13 @@ class SurveillanceConfig:
     pump_dump_min_price_change_pct: float = 0.005       # ≥0.5% price increase during accumulation
     pump_dump_sell_size_multiplier: float = 2.0         # Sell size ≥ N× avg accumulation trade
 
-    # Wash Trading
+    # Wash Trading (EDA-aligned: volume-symmetry approach)
+    wash_trading_min_total_volume: float = 10000.0      # Min total (buy+sell) executed volume
+    wash_trading_similarity_threshold: float = 0.90     # buy/sell volume similarity ≥ 90%
+    # Legacy pair-matching parameters (kept for reference, not used in primary logic)
     wash_trading_time_window_seconds: int = 120         # BUY and SELL within N seconds
     wash_trading_price_tolerance_pct: float = 0.001     # Price difference ≤ 0.1%
-    wash_trading_min_quantity: float = 100              # Min quantity to flag
+    wash_trading_min_quantity: float = 100              # Min quantity for pair matching
 
     # Layering
     layering_min_levels: int = 3                        # Min simultaneous bid levels
@@ -494,7 +497,7 @@ def detect_pump_and_dump(
 
 
 # ---------------------------------------------------------------------------
-# Pattern 5: Wash Trading
+# Pattern 5: Wash Trading (EDA-aligned volume-symmetry approach)
 # ---------------------------------------------------------------------------
 
 def detect_wash_trading(
@@ -502,9 +505,21 @@ def detect_wash_trading(
     config: SurveillanceConfig = DEFAULT_CONFIG,
 ) -> List[DetectedAlert]:
     """
-    Wash Trading: Same trader buys and sells the same instrument at the same
-    price within a short window, creating artificial volume with no real
-    economic purpose. Detected by matching BUY/SELL pairs by same trader.
+    Wash Trading: Same trader buys and sells the same instrument with nearly
+    identical total buy vs. sell volume, creating artificial market volume
+    without meaningful change in ownership exposure.
+
+    Detection logic (aligned with EDA Rule 4):
+      - Per (trader, symbol), sum executed BUY qty and SELL qty separately.
+      - Skip if total_volume (buy + sell) < min_total_volume threshold.
+      - Skip if either side has zero volume.
+      - Compute similarity = min(buy_qty, sell_qty) / max(buy_qty, sell_qty).
+      - Flag if similarity >= similarity_threshold (default: 0.90 = 90%).
+
+    Severity escalation:
+      - CRITICAL if similarity >= 0.98 AND total_volume >= 3× threshold
+      - HIGH     if similarity >= 0.95 OR total_volume >= 2× threshold
+      - MEDIUM   otherwise
     """
     alerts: List[DetectedAlert] = []
 
@@ -518,49 +533,42 @@ def detect_wash_trading(
             key=lambda x: _parse_time_seconds(x.timestamp, x.sequence_num),
         )
 
-        buys = [t for t in executed if t.side == "BUY"]
-        sells = [t for t in executed if t.side == "SELL"]
-
-        if not buys or not sells:
+        if not executed:
             continue
 
-        matched_pairs = []
-        used_sells = set()
+        buy_qty  = sum(t.quantity for t in executed if t.side == "BUY")
+        sell_qty = sum(t.quantity for t in executed if t.side == "SELL")
+        total_volume = buy_qty + sell_qty
 
-        for buy in buys:
-            buy_time = _parse_time_seconds(buy.timestamp, buy.sequence_num)
-            buy_price = buy.price
-
-            for si, sell in enumerate(sells):
-                if si in used_sells:
-                    continue
-                sell_time = _parse_time_seconds(sell.timestamp, sell.sequence_num)
-                sell_price = sell.price
-                dt = abs(sell_time - buy_time)
-
-                if dt > config.wash_trading_time_window_seconds:
-                    continue
-
-                price_diff_pct = abs(sell_price - buy_price) / buy_price if buy_price > 0 else 1
-                if price_diff_pct > config.wash_trading_price_tolerance_pct:
-                    continue
-
-                if buy.quantity < config.wash_trading_min_quantity:
-                    continue
-
-                matched_pairs.append((buy, sell))
-                used_sells.add(si)
-                break
-
-        if not matched_pairs:
+        # Minimum volume gate (EDA: total_volume < 10000 → skip)
+        if total_volume < config.wash_trading_min_total_volume:
             continue
 
-        wash_volume = sum(b.quantity for b, _ in matched_pairs)
-        total_volume = sum(t.quantity for t in executed)
-        wash_ratio = wash_volume / total_volume if total_volume > 0 else 0
+        # Both sides must be present
+        if buy_qty == 0 or sell_qty == 0:
+            continue
 
-        severity = "HIGH" if len(matched_pairs) >= 3 else "MEDIUM"
-        confidence = "High" if wash_ratio > 0.5 else "Medium"
+        # Symmetry score: how closely buy and sell volumes match (EDA: ≥ 0.90)
+        similarity = min(buy_qty, sell_qty) / max(buy_qty, sell_qty)
+
+        if similarity < config.wash_trading_similarity_threshold:
+            continue
+
+        # Severity: escalate for near-perfect symmetry or very large volumes
+        vol_multiplier = total_volume / config.wash_trading_min_total_volume
+        if similarity >= 0.98 and vol_multiplier >= 3.0:
+            severity = "CRITICAL"
+        elif similarity >= 0.95 or vol_multiplier >= 2.0:
+            severity = "HIGH"
+        else:
+            severity = "MEDIUM"
+
+        # Confidence: higher when symmetry is very tight
+        confidence = "High" if similarity >= 0.95 else "Medium"
+
+        # Timestamps from first/last executed trade
+        start_time = executed[0].timestamp
+        end_time   = executed[-1].timestamp
 
         alerts.append(DetectedAlert(
             trader_id=trader_id,
@@ -568,19 +576,24 @@ def detect_wash_trading(
             pattern="Wash Trading",
             severity=severity,
             confidence=confidence,
-            start_time=matched_pairs[0][0].timestamp,
-            end_time=matched_pairs[-1][1].timestamp,
+            start_time=start_time,
+            end_time=end_time,
             evidence={
-                "matched_pairs": len(matched_pairs),
-                "wash_volume": wash_volume,
+                "buy_volume": buy_qty,
+                "sell_volume": sell_qty,
                 "total_volume": total_volume,
-                "wash_ratio_pct": round(wash_ratio * 100, 1),
-                "price_tolerance_pct": config.wash_trading_price_tolerance_pct * 100,
+                "similarity_pct": round(similarity * 100, 1),
+                "volume_multiplier": round(vol_multiplier, 1),
+                "min_total_volume_threshold": config.wash_trading_min_total_volume,
+                "similarity_threshold_pct": round(
+                    config.wash_trading_similarity_threshold * 100, 0
+                ),
             },
             description=(
-                f"{trader_id} executed {len(matched_pairs)} matched BUY/SELL pairs on {symbol} "
-                f"at nearly identical prices within {config.wash_trading_time_window_seconds}s — "
-                f"{round(wash_ratio*100, 1)}% of volume is artificial wash trading."
+                f"{trader_id} traded {symbol} with {round(similarity*100, 1)}% buy/sell volume "
+                f"symmetry (buy: {buy_qty:,.0f}, sell: {sell_qty:,.0f}, "
+                f"total: {total_volume:,.0f} units) — consistent with artificial "
+                f"volume generation via wash trading."
             ),
         ))
 

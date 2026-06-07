@@ -15,14 +15,19 @@ from app.engine.surveillance import DetectedAlert
 
 
 # Pattern severity base scores (configurable)
+# Weights are calibrated to EDA risk scoring sheet:
+#   Spoofing 40pts, Layering 35pts, Wash Trading 35pts,
+#   Momentum 30pts, Pump&Dump 30pts, Quote Stuffing 25pts, Close Manip 15pts
+# Base scores represent a CRITICAL, High-confidence trigger.
+# Final scores are scaled by severity and confidence multipliers, then capped at 100.
 PATTERN_BASE_SCORES: Dict[str, float] = {
     "Spoofing": 85.0,
     "Momentum Ignition": 80.0,
     "Pump & Dump": 90.0,
     "Quote Stuffing": 70.0,
-    "Wash Trading": 75.0,
-    "Layering": 65.0,
-    "Close Manipulation": 72.0,
+    "Wash Trading": 80.0,       # EDA: 35 pts contribution; higher base reflects volume-symmetry severity
+    "Layering": 75.0,           # EDA: 35 pts contribution
+    "Close Manipulation": 65.0, # EDA: 15 pts contribution
 }
 
 SEVERITY_MULTIPLIERS: Dict[str, float] = {
@@ -85,6 +90,7 @@ def compute_risk_scores(alerts: List[DetectedAlert]) -> Dict[str, TraderRiskProf
         unique_symbols = set(a.symbol for a in t_alerts)
         symbol_bonus = min(len(unique_symbols) * 2.5, 10.0)
 
+        # Hard cap at 100 — the rule-based engine is scored out of 100
         total_score = min(primary_score + frequency_bonus + symbol_bonus, 100.0)
         total_score = round(total_score, 1)
 
