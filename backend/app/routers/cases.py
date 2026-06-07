@@ -107,7 +107,8 @@ async def update_case(
                 case.trader_id, 
                 str(case.patterns), 
                 case.risk_score, 
-                case.evidence if isinstance(case.evidence, dict) else {}
+                case.evidence if isinstance(case.evidence, dict) else {},
+                current_user.id
             ))
         case.status = data.status
     if data.assigned_to is not None:
@@ -158,8 +159,8 @@ async def add_comment(
 
 
 @router.post("/{case_id}/reasoning", response_model=MessageResponse)
-async def generate_case_reasoning(case_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Case).where(Case.id == case_id))
+async def generate_case_reasoning(case_id: uuid.UUID, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
+    result = await db.execute(select(Case).join(Investigation).where(Case.id == case_id, Investigation.user_id == current_user.id))
     case = result.scalar_one_or_none()
     if not case:
         raise HTTPException(status_code=404, detail="Case not found")
@@ -177,7 +178,7 @@ async def generate_case_reasoning(case_id: uuid.UUID, db: AsyncSession = Depends
     from app.services.claude_service import generate_batch_case_reasoning
     case_dict = {"case_id": str(case.id), "trader_id": case.trader_id, "symbol": case.symbol, "risk_score": case.risk_score, "patterns": case.patterns, "evidence": case.evidence}
     
-    reasoning_dict = await generate_batch_case_reasoning([case_dict], trades, context_events, false_positive_alerts, db)
+    reasoning_dict = await generate_batch_case_reasoning([case_dict], trades, context_events, false_positive_alerts, db, current_user.id)
     
     if str(case.id) in reasoning_dict:
         case.ai_analysis = reasoning_dict[str(case.id)]

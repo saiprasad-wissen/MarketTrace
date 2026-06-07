@@ -12,18 +12,20 @@ from app.models.ai import AIConversation
 from app.schemas import AIAskRequest, AIAskResponse
 from app.services.groq_service import ask_groq
 from app.models.settings import AppSettings
+from app.models.user import User
+from app.services.auth_service import get_current_user
 
 router = APIRouter(prefix="/api/ai", tags=["ai"])
 
 
 @router.post("/ask", response_model=AIAskResponse)
-async def ask_ai(request: AIAskRequest, db: AsyncSession = Depends(get_db)):
+async def ask_ai(request: AIAskRequest, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
     """
     Context-aware AI investigation copilot.
     Dynamically injects current investigation data into the system prompt.
     """
     # Load investigation
-    inv_result = await db.execute(select(Investigation).where(Investigation.id == request.investigation_id))
+    inv_result = await db.execute(select(Investigation).where(Investigation.id == request.investigation_id, Investigation.user_id == current_user.id))
     inv = inv_result.scalar_one_or_none()
     if not inv:
         raise HTTPException(status_code=404, detail="Investigation not found")
@@ -44,7 +46,7 @@ async def ask_ai(request: AIAskRequest, db: AsyncSession = Depends(get_db)):
     )).scalars().all()
 
     # Get Groq API key from settings
-    key_setting = (await db.execute(select(AppSettings).where(AppSettings.key == "groq_api_key"))).scalar_one_or_none()
+    key_setting = (await db.execute(select(AppSettings).where(AppSettings.key == "groq_api_key", AppSettings.user_id == current_user.id))).scalar_one_or_none()
     groq_key = key_setting.value if key_setting else ""
 
     # Build suspicious traders list from alerts (dynamic — not hardcoded)

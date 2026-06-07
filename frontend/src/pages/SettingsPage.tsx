@@ -132,7 +132,7 @@ export function SettingsPage() {
 
               <div className="card p-6">
                 <h3 className="text-sm font-semibold text-slate-800 mb-4 flex items-center gap-2">
-                  <Bot className="w-4 h-4" /> Anthropic (Claude 3.5)
+                  <Bot className="w-4 h-4" /> Anthropic (Claude 4)
                 </h3>
                 <div className="space-y-4">
                   <div>
@@ -471,7 +471,7 @@ function HelpSection() {
           <div className="rounded-lg border border-slate-200 p-4 space-y-3">
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold bg-violet-100 text-violet-700 px-2 py-0.5 rounded-full">ANTHROPIC</span>
-              <span className="text-sm font-semibold text-slate-700">Claude 3.5 — Deep Analysis</span>
+              <span className="text-sm font-semibold text-slate-700">Claude 4 — Deep Analysis</span>
             </div>
             <Step n={1}>
               Sign up or log in at <ExternalLink href="https://console.anthropic.com">console.anthropic.com</ExternalLink>.

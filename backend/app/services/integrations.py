@@ -11,9 +11,9 @@ from sqlalchemy import select
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("integrations")
 
-async def get_db_setting(key: str) -> str | None:
+async def get_db_setting(key: str, user_id: str) -> str | None:
     async with AsyncSessionLocal() as db:
-        result = await db.execute(select(AppSettings).where(AppSettings.key == key))
+        result = await db.execute(select(AppSettings).where(AppSettings.key == key, AppSettings.user_id == user_id))
         row = result.scalar_one_or_none()
         return row.value if row else None
 
@@ -22,23 +22,24 @@ async def dispatch_escalation(
     trader_id: str, 
     patterns: str, 
     risk_score: float, 
-    evidence: dict
+    evidence: dict,
+    user_id: str
 ):
     logger.info(f"Starting integration dispatch for escalated case: {case_ref}")
     
     # Fetch settings from Database Config
-    atlassian_secret = await get_db_setting("atlassian_secret")
-    atlassian_endpoint = await get_db_setting("atlassian_endpoint")
-    jira_project_id = await get_db_setting("jira_project_id") or "KAN"
-    slack_bot_key = await get_db_setting("slack_bot_key")
-    slack_channel = await get_db_setting("slack_channel") or "#compliance-alerts"
-    smtp_host = await get_db_setting("smtp_host") or "smtp.gmail.com"
-    smtp_port_str = await get_db_setting("smtp_port")
+    atlassian_secret = await get_db_setting("atlassian_secret", user_id)
+    atlassian_endpoint = await get_db_setting("atlassian_endpoint", user_id)
+    jira_project_id = await get_db_setting("jira_project_id", user_id) or "KAN"
+    slack_bot_key = await get_db_setting("slack_bot_key", user_id)
+    slack_channel = await get_db_setting("slack_channel", user_id) or "#compliance-alerts"
+    smtp_host = await get_db_setting("smtp_host", user_id) or "smtp.gmail.com"
+    smtp_port_str = await get_db_setting("smtp_port", user_id)
     smtp_port = int(smtp_port_str) if smtp_port_str else 587
-    smtp_user = await get_db_setting("smtp_user")
-    smtp_pass = await get_db_setting("smtp_pass")
-    smtp_recipient = await get_db_setting("smtp_recipient")
-    groq_api_key = await get_db_setting("groq_api_key")
+    smtp_user = await get_db_setting("smtp_user", user_id)
+    smtp_pass = await get_db_setting("smtp_pass", user_id)
+    smtp_recipient = await get_db_setting("smtp_recipient", user_id)
+    groq_api_key = await get_db_setting("groq_api_key", user_id)
     
     # 1. Use Groq to generate a description
     prompt = f"Write a professional, concise executive summary for an escalated trade surveillance case.\nCase Ref: {case_ref}\nTrader: {trader_id}\nRisk Score: {risk_score}\nPatterns: {patterns}\nEvidence: {evidence}\nKeep it under 3 paragraphs, boardroom-ready. Do not use markdown."
@@ -166,13 +167,18 @@ Please review this case immediately in the MarketTrace portal.
             msg["To"] = smtp_recipient
             
             def send_email_sync():
-                with smtplib.SMTP(smtp_host, smtp_port, timeout=5) as server:
-                    server.starttls()
-                    server.login(smtp_user, smtp_pass)
-                    server.send_message(msg)
+                if smtp_port == 465:
+                    with smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=5) as server:
+                        server.login(smtp_user, smtp_pass)
+                        server.send_message(msg)
+                else:
+                    with smtplib.SMTP(smtp_host, smtp_port, timeout=5) as server:
+                        server.starttls()
+                        server.login(smtp_user, smtp_pass)
+                        server.send_message(msg)
             
             import asyncio
             await asyncio.to_thread(send_email_sync)
             logger.info(f"Successfully sent email for {case_ref}")
         except Exception as e:
-            logger.error(f"SMTP Email failed: {e}")
+            logger.warning(f"Could not send email (network unreachable). Please verify your SMTP settings and ensure your network allows outbound traffic on port {smtp_port}. Details: {e}")

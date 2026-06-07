@@ -4,6 +4,7 @@ from typing import Optional
 from sqlalchemy import String, Text, DateTime, JSON, func
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import ForeignKey
 from app.database import Base
 
 
@@ -24,6 +25,7 @@ class AppSettings(Base):
     __tablename__ = "app_settings"
 
     key: Mapped[str] = mapped_column(String(100), primary_key=True)
+    user_id: Mapped[str] = mapped_column(String, ForeignKey("users.id"), primary_key=True)
     value: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
@@ -31,6 +33,7 @@ class TokenUsage(Base):
     __tablename__ = "token_usage"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[str] = mapped_column(String, ForeignKey("users.id"), nullable=False)
     model_name: Mapped[str] = mapped_column(String(100), nullable=False)
     input_tokens: Mapped[int] = mapped_column(default=0)
     output_tokens: Mapped[int] = mapped_column(default=0)

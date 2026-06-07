@@ -51,17 +51,17 @@ export function RegisterPage() {
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ duration: 0.5, type: 'spring', bounce: 0.4 }}
-        className="max-w-md w-full space-y-8 bg-slate-900/50 backdrop-blur-2xl p-10 rounded-[2.5rem] shadow-[0_8px_32px_0_rgba(0,0,0,0.3)] border border-white/10 relative z-10"
+        className="max-w-[400px] w-full space-y-6 bg-slate-900/50 backdrop-blur-2xl p-8 rounded-[2rem] shadow-[0_8px_32px_0_rgba(0,0,0,0.3)] border border-white/10 relative z-10"
       >
-        <div className="absolute inset-0 rounded-[2.5rem] shadow-[inset_0_0_80px_rgba(255,255,255,0.02)] pointer-events-none" />
+        <div className="absolute inset-0 rounded-[2rem] shadow-[inset_0_0_80px_rgba(255,255,255,0.02)] pointer-events-none" />
         
         <div className="relative z-10 text-center">
           <motion.div 
             whileHover={{ rotate: 180 }}
             transition={{ duration: 0.5 }}
-            className="mx-auto h-14 w-14 bg-gradient-to-br from-primary-500 to-indigo-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-primary-500/30"
+            className="mx-auto h-12 w-12 bg-gradient-to-br from-primary-500 to-indigo-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-primary-500/30"
           >
-            <Activity className="h-7 w-7 text-white" />
+            <Activity className="h-6 w-6 text-white" />
           </motion.div>
           <h2 className="text-3xl font-extrabold text-white tracking-tight">Create account</h2>
           <p className="mt-3 text-sm text-slate-400">
@@ -69,7 +69,7 @@ export function RegisterPage() {
           </p>
         </div>
         
-        <form className="relative z-10 mt-8 space-y-5" onSubmit={handleRegister}>
+        <form className="relative z-10 mt-6 space-y-4" onSubmit={handleRegister}>
           {error && (
             <div className="p-3 bg-red-50 text-red-600 text-sm font-medium rounded-lg border border-red-100">
               {error}
@@ -86,7 +86,7 @@ export function RegisterPage() {
                 <input
                   type="text"
                   required
-                  className="block w-full pl-11 pr-3 py-3 bg-slate-900/50 border border-slate-700/50 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-white placeholder-slate-500 transition-all shadow-inner"
+                  className="block w-full pl-11 pr-3 py-2.5 bg-slate-900/50 border border-slate-700/50 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-white placeholder-slate-500 transition-all shadow-inner"
                   placeholder="Jane Doe"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
@@ -103,7 +103,7 @@ export function RegisterPage() {
                 <input
                   type="email"
                   required
-                  className="block w-full pl-11 pr-3 py-3 bg-slate-900/50 border border-slate-700/50 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-white placeholder-slate-500 transition-all shadow-inner"
+                  className="block w-full pl-11 pr-3 py-2.5 bg-slate-900/50 border border-slate-700/50 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-white placeholder-slate-500 transition-all shadow-inner"
                   placeholder="jane@company.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -119,7 +119,7 @@ export function RegisterPage() {
                 </div>
                 <input
                   type="text"
-                  className="block w-full pl-11 pr-3 py-3 bg-slate-900/50 border border-slate-700/50 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-white placeholder-slate-500 transition-all shadow-inner"
+                  className="block w-full pl-11 pr-3 py-2.5 bg-slate-900/50 border border-slate-700/50 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-white placeholder-slate-500 transition-all shadow-inner"
                   placeholder="Company Name (Optional)"
                   value={org}
                   onChange={(e) => setOrg(e.target.value)}
@@ -136,7 +136,7 @@ export function RegisterPage() {
                 <input
                   type={showPassword ? 'text' : 'password'}
                   required
-                  className="block w-full pl-11 pr-11 py-3 bg-slate-900/50 border border-slate-700/50 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-white placeholder-slate-500 transition-all shadow-inner"
+                  className="block w-full pl-11 pr-11 py-2.5 bg-slate-900/50 border border-slate-700/50 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-white placeholder-slate-500 transition-all shadow-inner"
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -164,14 +164,14 @@ export function RegisterPage() {
             whileTap={{ scale: 0.98 }}
             type="submit"
             disabled={loading}
-            className="w-full flex justify-center items-center gap-2 py-3.5 px-4 border border-transparent rounded-xl shadow-[0_0_20px_rgba(79,70,229,0.3)] text-sm font-bold text-white bg-gradient-to-r from-primary-600 to-indigo-600 hover:from-primary-500 hover:to-indigo-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 focus:ring-primary-500 disabled:opacity-70 transition-all mt-8"
+            className="w-full flex justify-center items-center gap-2 py-3 px-4 border border-transparent rounded-xl shadow-[0_0_20px_rgba(79,70,229,0.3)] text-sm font-bold text-white bg-gradient-to-r from-primary-600 to-indigo-600 hover:from-primary-500 hover:to-indigo-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 focus:ring-primary-500 disabled:opacity-70 transition-all mt-6"
           >
             {loading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : 'Create Account'}
             {!loading && <ArrowRight className="w-4 h-4" />}
           </motion.button>
         </form>
 
-        <p className="mt-8 text-center text-sm text-slate-400 relative z-10">
+        <p className="mt-6 text-center text-sm text-slate-400 relative z-10">
           Already have an account?{' '}
           <Link to="/login" className="font-semibold text-primary-400 hover:text-primary-300 transition-colors">
             Sign in
