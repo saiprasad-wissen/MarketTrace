@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowUpCircle, ChevronDown, ChevronUp, Eye, Info, X } from 'lucide-react'
+import { ArrowUpCircle, ChevronDown, ChevronUp, Eye, Info, X, ExternalLink } from 'lucide-react'
 import type { Case } from '@/types'
 import { cn, priorityClass, riskScoreColor, riskScoreClass } from '@/lib/utils'
 import { casesApi, investigationsApi } from '@/services/api'
@@ -359,7 +359,20 @@ export function InvestigationQueue({ cases, onRefresh }: Props) {
                     {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
                 </td>
-                <td className="text-xs text-slate-500">{c.assigned_to || '—'}</td>
+                <td className="text-xs text-slate-500">
+                  {c.assigned_to ? (
+                    /^[A-Z]+-\d+$/.test(c.assigned_to) ? (
+                      <a href={`https://jira.atlassian.com/browse/${c.assigned_to}`} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-primary-600 hover:text-primary-700 font-medium hover:underline">
+                        {c.assigned_to}
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    ) : (
+                      c.assigned_to
+                    )
+                  ) : (
+                    '—'
+                  )}
+                </td>
                 <td>
                   <div className="flex items-center gap-1">
                     <button onClick={() => setTraceTrader(c.trader_id)}
