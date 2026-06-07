@@ -167,17 +167,16 @@ export function ReplayEngine() {
 
           <div className="w-px h-4 bg-slate-700" />
 
-          {!isPlaying ? (
-            <button onClick={play} disabled={isDone}
-              className="p-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white disabled:opacity-40 transition-colors">
-              <Play className="w-4 h-4" />
-            </button>
-          ) : (
-            <button onClick={pause}
-              className="p-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white transition-colors">
-              <Pause className="w-4 h-4" />
-            </button>
-          )}
+          <button onClick={play} disabled={isPlaying || isDone}
+            className="p-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white disabled:opacity-40 transition-colors"
+            title="Play">
+            <Play className="w-4 h-4" />
+          </button>
+          <button onClick={pause} disabled={!isPlaying}
+            className="p-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white disabled:opacity-40 transition-colors"
+            title="Pause">
+            <Pause className="w-4 h-4" />
+          </button>
           <button onClick={stop}
             className="p-1.5 rounded-lg bg-slate-600 hover:bg-slate-500 text-white transition-colors">
             <Square className="w-4 h-4" />
