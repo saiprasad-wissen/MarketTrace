@@ -141,6 +141,7 @@ class AlertResponse(BaseModel):
     end_time: Optional[str]
     evidence: Optional[Dict[str, Any]]
     description: Optional[str]
+    is_false_positive: bool = False
     created_at: datetime
 
     class Config:

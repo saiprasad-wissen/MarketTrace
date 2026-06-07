@@ -5,7 +5,7 @@ import type {
 } from '@/types'
 
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : '/api',
   headers: { 'Content-Type': 'application/json' },
 })
 
@@ -79,6 +79,8 @@ export const tradesApi = {
 export const alertsApi = {
   list: (invId: string, params?: { symbol?: string; trader_id?: string; pattern?: string; severity?: string }) =>
     api.get<Alert[]>(`/investigations/${invId}/alerts`, { params }).then(r => r.data),
+  toggleFalsePositive: (alertId: string, is_false_positive: boolean) =>
+    api.patch(`/alerts/${alertId}/false-positive`, { is_false_positive }).then(r => r.data),
 }
 
 // ─── Cases ────────────────────────────────────────────────────────────────────

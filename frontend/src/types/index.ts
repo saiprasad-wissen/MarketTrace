@@ -76,6 +76,7 @@ export interface Alert {
   end_time?: string
   evidence?: Record<string, unknown>
   description?: string
+  is_false_positive: boolean
   created_at: string
 }
 

@@ -44,3 +44,23 @@ async def get_alerts(
     q = q.order_by(Alert.created_at.desc())
     result = await db.execute(q)
     return result.scalars().all()
+
+from pydantic import BaseModel
+class FalsePositiveToggle(BaseModel):
+    is_false_positive: bool
+
+@global_router.patch("/{alert_id}/false-positive")
+async def toggle_false_positive(
+    alert_id: uuid.UUID,
+    payload: FalsePositiveToggle,
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(select(Alert).where(Alert.id == alert_id))
+    alert = result.scalar_one_or_none()
+    if not alert:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Alert not found")
+    
+    alert.is_false_positive = payload.is_false_positive
+    await db.commit()
+    return {"status": "success", "is_false_positive": alert.is_false_positive}

@@ -108,6 +108,24 @@ export function CaseTraceModal({ caseId, onClose }: Props) {
                      <h2 className="text-sm font-semibold text-primary-700 uppercase tracking-wider flex items-center gap-2">
                        <Brain className="w-5 h-5" /> AI Forensic Reasoning
                      </h2>
+                     <button
+                       onClick={async () => {
+                         setCaseData(null)
+                         setLoading(true)
+                         try {
+                           await casesApi.generateReasoning(caseId)
+                           await load()
+                         } catch (e) {
+                           console.error(e)
+                           setLoading(false)
+                         }
+                       }}
+                       disabled={loading}
+                       className="btn btn-secondary py-1.5 px-3 text-xs"
+                     >
+                       <RefreshCw className={cn("w-3.5 h-3.5 mr-1.5", loading && "animate-spin")} />
+                       Regenerate Analysis
+                     </button>
                   </div>
                   
                   <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 min-h-[200px] overflow-hidden">
