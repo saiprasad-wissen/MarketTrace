@@ -1,115 +1,271 @@
-import { useMemo, useCallback } from 'react'
+import { useMemo, useCallback, useEffect } from 'react'
 import {
   ReactFlow, Background, Controls, MiniMap,
   useNodesState, useEdgesState, BackgroundVariant,
+  MarkerType,
 } from '@xyflow/react'
 import type { Node, Edge } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import type { Alert } from '@/types'
-import { riskScoreColor } from '@/lib/utils'
+import { riskScoreColor, patternColor } from '@/lib/utils'
 import { useAppStore } from '@/store/useAppStore'
+import { Users, Info } from 'lucide-react'
 
 interface Props {
   alerts: Alert[]
 }
 
+// ─── Legend items ─────────────────────────────────────────────────────────────
+const RISK_LEGEND = [
+  { label: '≥85  Critical', color: '#dc2626' },
+  { label: '70–84  High', color: '#ea580c' },
+  { label: '50–69  Medium', color: '#d97706' },
+  { label: '<50   Low', color: '#16a34a' },
+]
+
 export function TraderNetworkGraph({ alerts }: Props) {
   const { setTraceTrader, traderRiskSummaries } = useAppStore()
 
-  const { nodes, edges } = useMemo(() => {
-    // Build trader nodes from alert data — fully dynamic
-    const traderMap = new Map<string, { patterns: Set<string>; symbols: Set<string>; risk: number }>()
+  // ─── Build graph data from alerts (reactive to filtered set) ─────────────────
+  const { nodes: builtNodes, edges: builtEdges, traderCount, edgeCount } = useMemo(() => {
+    const traderMap = new Map<string, { patterns: Set<string>; symbols: Set<string>; risk: number; alertCount: number }>()
 
     alerts.forEach(a => {
       if (!traderMap.has(a.trader_id)) {
-        traderMap.set(a.trader_id, { patterns: new Set(), symbols: new Set(), risk: 0 })
+        traderMap.set(a.trader_id, { patterns: new Set(), symbols: new Set(), risk: 0, alertCount: 0 })
       }
       const t = traderMap.get(a.trader_id)!
       t.patterns.add(a.pattern)
       t.symbols.add(a.symbol)
+      t.alertCount += 1
     })
 
-    // Attach risk scores
+    // Attach risk scores from store
     traderRiskSummaries.forEach(r => {
       const t = traderMap.get(r.trader_id)
       if (t) t.risk = r.risk_score
     })
 
     const traders = [...traderMap.entries()]
-    if (!traders.length) return { nodes: [], edges: [] }
+    if (!traders.length) return { nodes: [], edges: [], traderCount: 0, edgeCount: 0 }
 
-    // Circular layout
-    const cx = 300, cy = 250, r = 180
-    const nodes: Node[] = traders.map(([id, data], i) => {
-      const angle = (i / traders.length) * 2 * Math.PI - Math.PI / 2
-      const size = Math.max(32, 20 + data.risk * 0.4)
-      const color = riskScoreColor(data.risk)
-      return {
-        id,
-        position: { x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) },
-        data: { label: id },
-        style: {
-          width: size, height: size, borderRadius: '50%',
-          backgroundColor: color + '25',
-          border: `2px solid ${color}`,
-          fontSize: 9, fontWeight: 700, color,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        },
-      }
-    })
+    // ─── Layout: concentric circles for better readability ────────────────────
+    const total = traders.length
+    const cx = 340, cy = 220
+    let nodes: Node[]
 
-    // Edges: connect traders who share symbols
+    if (total <= 1) {
+      nodes = traders.map(([id, data]) => buildNode(id, data, cx, cy))
+    } else if (total <= 6) {
+      // Single ring
+      const r = 160
+      nodes = traders.map(([id, data], i) => {
+        const angle = (i / total) * 2 * Math.PI - Math.PI / 2
+        return buildNode(id, data, cx + r * Math.cos(angle), cy + r * Math.sin(angle))
+      })
+    } else {
+      // Inner + outer rings
+      const inner = Math.ceil(total / 3)
+      const outer = total - inner
+      nodes = traders.map(([id, data], i) => {
+        const isInner = i < inner
+        const idx = isInner ? i : i - inner
+        const count = isInner ? inner : outer
+        const r = isInner ? 90 : 185
+        const angle = (idx / count) * 2 * Math.PI - Math.PI / 2
+        return buildNode(id, data, cx + r * Math.cos(angle), cy + r * Math.sin(angle))
+      })
+    }
+
+    // ─── Edges: connect traders sharing symbols ────────────────────────────────
     const edges: Edge[] = []
     const seen = new Set<string>()
+
     traders.forEach(([id1, d1]) => {
       traders.forEach(([id2, d2]) => {
         if (id1 >= id2) return
         const shared = [...d1.symbols].filter(s => d2.symbols.has(s))
-        if (shared.length === 0) return
+        if (!shared.length) return
         const key = `${id1}-${id2}`
         if (seen.has(key)) return
         seen.add(key)
+
+        const risk1 = d1.risk, risk2 = d2.risk
+        const avgRisk = (risk1 + risk2) / 2
+        const strokeColor = riskScoreColor(avgRisk)
+        const strokeWidth = shared.length > 2 ? 3 : shared.length > 1 ? 2 : 1
+
         edges.push({
           id: key,
-          source: id1, target: id2,
-          style: { stroke: '#94a3b8', strokeWidth: 1, opacity: 0.5 },
+          source: id1,
+          target: id2,
+          style: {
+            stroke: strokeColor,
+            strokeWidth,
+            opacity: 0.55,
+          },
           label: shared.length > 1 ? `${shared.length} symbols` : shared[0],
-          labelStyle: { fontSize: 8, fill: '#94a3b8' },
-          animated: shared.length >= 2,
+          labelStyle: { fontSize: 8, fill: '#64748b', fontWeight: 600 },
+          labelBgStyle: { fill: '#ffffff', fillOpacity: 0.85 },
+          animated: avgRisk >= 70,
+          markerEnd: { type: MarkerType.Arrow, color: strokeColor, width: 8, height: 8 },
         })
       })
     })
 
-    return { nodes, edges }
+    return { nodes, edges, traderCount: traders.length, edgeCount: edges.length }
   }, [alerts, traderRiskSummaries])
 
-  const [flowNodes, , onNodesChange] = useNodesState(nodes)
-  const [flowEdges, , onEdgesChange] = useEdgesState(edges)
+  // ─── Sync ReactFlow state whenever alerts change ──────────────────────────────
+  const [flowNodes, setFlowNodes, onNodesChange] = useNodesState(builtNodes)
+  const [flowEdges, setFlowEdges, onEdgesChange] = useEdgesState(builtEdges)
+
+  useEffect(() => {
+    setFlowNodes(builtNodes)
+    setFlowEdges(builtEdges)
+  }, [builtNodes, builtEdges])
 
   const onNodeClick = useCallback((_: any, node: Node) => {
     setTraceTrader(node.id)
   }, [setTraceTrader])
 
-  if (!nodes.length) {
+  if (!builtNodes.length) {
     return (
-      <div className="flex items-center justify-center h-64 text-slate-400 text-sm">
-        No trader network to display
+      <div className="flex flex-col items-center justify-center h-64 gap-3 text-slate-400">
+        <div className="w-12 h-12 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center">
+          <Users className="w-6 h-6" />
+        </div>
+        <div className="text-center">
+          <p className="text-sm font-medium text-slate-500">No trader connections</p>
+          <p className="text-xs text-slate-400 mt-0.5">Select a symbol with alerts to view the network</p>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="h-72 rounded-xl overflow-hidden border border-slate-100">
-      <ReactFlow
-        nodes={flowNodes} edges={flowEdges}
-        onNodesChange={onNodesChange} onEdgesChange={onEdgesChange}
-        onNodeClick={onNodeClick}
-        fitView fitViewOptions={{ padding: 0.2 }}
-        nodesDraggable attributionPosition="bottom-left">
-        <Background variant={BackgroundVariant.Dots} gap={16} size={1} color="#e2e8f0" />
-        <Controls showInteractive={false} />
-        <MiniMap nodeColor={(n) => (n.style?.backgroundColor as string) || '#e2e8f0'} nodeStrokeWidth={0} />
-      </ReactFlow>
+    <div className="space-y-3">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Users className="w-4 h-4 text-slate-400" />
+          <p className="text-xs font-bold text-slate-700">Trader Network Graph</p>
+          <p className="text-[10px] text-slate-400">· Node size = risk score · Edge = shared symbol · Click to trace</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-medium">
+            {traderCount} traders
+          </span>
+          <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-medium">
+            {edgeCount} connections
+          </span>
+        </div>
+      </div>
+
+      {/* Legend */}
+      <div className="flex items-center gap-4 flex-wrap px-1">
+        <div className="flex items-center gap-1 text-[9px] text-slate-400">
+          <Info className="w-3 h-3" />
+          <span>Risk level:</span>
+        </div>
+        {RISK_LEGEND.map(({ label, color }) => (
+          <div key={label} className="flex items-center gap-1">
+            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
+            <span className="text-[9px] text-slate-500 font-medium">{label}</span>
+          </div>
+        ))}
+        <div className="flex items-center gap-1 ml-auto">
+          <div className="w-6 h-px border-t-2 border-dashed border-orange-400" />
+          <span className="text-[9px] text-slate-400">Animated = high-risk link</span>
+        </div>
+      </div>
+
+      {/* Graph canvas */}
+      <div className="h-80 rounded-xl overflow-hidden border border-slate-200 shadow-sm">
+        <ReactFlow
+          nodes={flowNodes}
+          edges={flowEdges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onNodeClick={onNodeClick}
+          fitView
+          fitViewOptions={{ padding: 0.25 }}
+          nodesDraggable
+          attributionPosition="bottom-left"
+          defaultEdgeOptions={{ type: 'smoothstep' }}
+        >
+          <Background variant={BackgroundVariant.Dots} gap={18} size={1} color="#e2e8f0" />
+          <Controls showInteractive={false} style={{ bottom: 8, left: 8 }} />
+          <MiniMap
+            nodeColor={(n) => (n.style?.borderColor as string) || '#e2e8f0'}
+            nodeStrokeWidth={0}
+            maskColor="rgba(248,250,252,0.6)"
+            style={{ bottom: 8, right: 8 }}
+          />
+        </ReactFlow>
+      </div>
+
+      {/* Insight strip */}
+      <div className="flex items-center gap-2 px-1">
+        <div className="flex-1 h-px bg-slate-100" />
+        <span className="text-[10px] text-slate-400 font-medium px-2">
+          💡 Animated edges indicate high-risk trader pairs. Click any node to open Trace View.
+        </span>
+        <div className="flex-1 h-px bg-slate-100" />
+      </div>
     </div>
   )
+}
+
+// ─── Helper: build a styled ReactFlow node ────────────────────────────────────
+
+function buildNode(
+  id: string,
+  data: { patterns: Set<string>; symbols: Set<string>; risk: number; alertCount: number },
+  x: number,
+  y: number,
+): Node {
+  const size = Math.max(36, Math.min(72, 28 + data.risk * 0.45))
+  const color = riskScoreColor(data.risk)
+  const mainPattern = [...data.patterns][0] ?? ''
+  const patColor = patternColor(mainPattern)
+
+  return {
+    id,
+    position: { x, y },
+    data: {
+      label: (
+        <div style={{
+          width: '100%', height: '100%',
+          display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center',
+          gap: 1,
+        }}>
+          <span style={{ fontSize: Math.max(7, size * 0.2), fontWeight: 800, lineHeight: 1 }}>
+            {id.slice(0, 4)}
+          </span>
+          {data.risk > 0 && (
+            <span style={{ fontSize: 7, fontWeight: 600, opacity: 0.85 }}>
+              {data.risk}
+            </span>
+          )}
+        </div>
+      ),
+    },
+    style: {
+      width: size,
+      height: size,
+      borderRadius: '50%',
+      backgroundColor: color + '20',
+      border: `2.5px solid ${color}`,
+      color,
+      cursor: 'pointer',
+      boxShadow: data.risk >= 85
+        ? `0 0 12px ${color}55, 0 0 24px ${color}25`
+        : data.risk >= 70
+        ? `0 0 8px ${color}40`
+        : 'none',
+      transition: 'all 0.3s ease',
+    },
+  }
 }

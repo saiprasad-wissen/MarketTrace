@@ -334,32 +334,6 @@ export function TraderTraceModal({ traderId, investigationId, profileTraders = [
                 </div>
               </div>
 
-              {/* Risk Assessment */}
-              <div className="card p-5">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                    <BookOpen className="w-4 h-4" /> Risk Assessment
-                  </h2>
-                  <span className={cn('text-sm font-bold', riskScoreClass(riskScore))}>
-                    {riskScore >= 85 ? 'ESCALATION RECOMMENDED' :
-                     riskScore >= 70 ? 'HIGH PRIORITY — INVESTIGATE' :
-                     riskScore >= 50 ? 'MEDIUM — MONITOR' : 'LOW — REVIEW'}
-                  </span>
-                </div>
-                <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
-                  <motion.div
-                    initial={{ width: 0 }} animate={{ width: `${riskScore}%` }}
-                    transition={{ duration: 0.8, ease: 'easeOut' }}
-                    className="h-full rounded-full"
-                    style={{ backgroundColor: riskScoreColor(riskScore) }}
-                  />
-                </div>
-                <div className="flex justify-between mt-1">
-                  <span className="text-[10px] text-slate-400">0</span>
-                  <span className="text-[10px] text-slate-400">50</span>
-                  <span className="text-[10px] text-slate-400">100</span>
-                </div>
-              </div>
 
             </div>
           )}

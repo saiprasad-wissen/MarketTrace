@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import { ArrowUpCircle, ChevronDown, ChevronUp, Eye } from 'lucide-react'
 import type { Case } from '@/types'
 import { cn, statusClass, priorityClass, riskScoreColor, riskScoreClass, timeAgo } from '@/lib/utils'
-import { casesApi } from '@/services/api'
+import { casesApi, investigationsApi } from '@/services/api'
 import { useAppStore } from '@/store/useAppStore'
 import { CaseTraceModal } from '@/components/cases/CaseTraceModal'
 
@@ -15,7 +15,7 @@ interface Props {
 const STATUSES = ['Open', 'Investigating', 'Escalated', 'Closed']
 
 export function InvestigationQueue({ cases, onRefresh }: Props) {
-  const { setTraceTrader, activeInvestigation } = useAppStore()
+  const { setTraceTrader, activeInvestigation, setActiveInvestigation } = useAppStore()
   const [filterStatus, setFilterStatus] = useState<string>('')
   const [sortBy, setSortBy] = useState<'risk_score' | 'created_at'>('risk_score')
   const [sortAsc, setSortAsc] = useState(false)
@@ -32,6 +32,11 @@ export function InvestigationQueue({ cases, onRefresh }: Props) {
   const handleStatusChange = async (caseId: string, status: string) => {
     await casesApi.update(caseId, { status })
     onRefresh()
+    // Re-fetch investigation stats so escalated_cases in funnel + metrics updates immediately
+    if (activeInvestigation) {
+      const updated = await investigationsApi.get(activeInvestigation.id).catch(() => null)
+      if (updated) setActiveInvestigation(updated)
+    }
   }
 
   const toggleSort = (col: typeof sortBy) => {
