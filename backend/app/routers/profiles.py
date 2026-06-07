@@ -7,6 +7,8 @@ import uuid
 from app.database import get_db
 from app.models.profile import Profile, ProfileStock, ProfileTrader
 from app.models.investigation import Investigation
+from app.models.user import User
+from app.services.auth_service import get_current_user
 from app.schemas import ProfileCreate, ProfileUpdate, ProfileResponse, ProfileListResponse, MessageResponse
 from app.engine.csv_parser import parse_stocks_csv, parse_traders_csv
 
@@ -14,9 +16,9 @@ router = APIRouter(prefix="/api/profiles", tags=["profiles"])
 
 
 @router.get("", response_model=List[ProfileListResponse])
-async def list_profiles(db: AsyncSession = Depends(get_db)):
+async def list_profiles(db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
     result = await db.execute(
-        select(Profile).where(Profile.status != "deleted").order_by(Profile.created_at.desc())
+        select(Profile).where(Profile.status != "deleted", Profile.user_id == current_user.id).order_by(Profile.created_at.desc())
     )
     profiles = result.scalars().all()
     out = []
@@ -33,8 +35,8 @@ async def list_profiles(db: AsyncSession = Depends(get_db)):
 
 
 @router.post("", response_model=ProfileListResponse)
-async def create_profile(data: ProfileCreate, db: AsyncSession = Depends(get_db)):
-    profile = Profile(name=data.name, description=data.description)
+async def create_profile(data: ProfileCreate, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
+    profile = Profile(name=data.name, description=data.description, user_id=current_user.id)
     db.add(profile)
     await db.flush()
     await db.refresh(profile)
@@ -43,8 +45,8 @@ async def create_profile(data: ProfileCreate, db: AsyncSession = Depends(get_db)
 
 
 @router.get("/{profile_id}", response_model=ProfileResponse)
-async def get_profile(profile_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Profile).where(Profile.id == profile_id))
+async def get_profile(profile_id: uuid.UUID, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
+    result = await db.execute(select(Profile).where(Profile.id == profile_id, Profile.user_id == current_user.id))
     profile = result.scalar_one_or_none()
     if not profile:
         raise HTTPException(status_code=404, detail="Profile not found")
@@ -60,9 +62,9 @@ async def get_profile(profile_id: uuid.UUID, db: AsyncSession = Depends(get_db))
     )
 
 
-@router.put("/{profile_id}", response_model=MessageResponse)
-async def update_profile(profile_id: uuid.UUID, data: ProfileUpdate, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Profile).where(Profile.id == profile_id))
+@router.put("/{profile_id}", response_model=ProfileListResponse)
+async def update_profile(profile_id: uuid.UUID, data: ProfileUpdate, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
+    result = await db.execute(select(Profile).where(Profile.id == profile_id, Profile.user_id == current_user.id))
     profile = result.scalar_one_or_none()
     if not profile:
         raise HTTPException(status_code=404, detail="Profile not found")
@@ -76,8 +78,8 @@ async def update_profile(profile_id: uuid.UUID, data: ProfileUpdate, db: AsyncSe
 
 
 @router.delete("/{profile_id}", response_model=MessageResponse)
-async def delete_profile(profile_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Profile).where(Profile.id == profile_id))
+async def delete_profile(profile_id: uuid.UUID, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
+    result = await db.execute(select(Profile).where(Profile.id == profile_id, Profile.user_id == current_user.id))
     profile = result.scalar_one_or_none()
     if not profile:
         raise HTTPException(status_code=404, detail="Profile not found")
