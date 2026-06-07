@@ -107,17 +107,6 @@ export function DashboardPage() {
   const filteredCases = selectedSymbol ? cases.filter(c => c.symbol === selectedSymbol) : cases
   const filteredContextEvents = selectedSymbol ? contextEvents.filter(c => !c.symbol || c.symbol === selectedSymbol) : contextEvents
 
-  // Dynamic counts for metrics and funnel
-  const dynTrades = selectedSymbol ? filteredTrades.length : activeInvestigation.total_trades
-  const dynAlerts = selectedSymbol ? filteredAlerts.length : activeInvestigation.total_alerts
-  const dynCases = selectedSymbol ? filteredCases.length : cases.length
-  const dynEscalated = selectedSymbol 
-    ? filteredCases.filter(c => c.status === 'Escalated').length 
-    : cases.filter(c => c.status === 'Escalated').length
-  const dynTraders = selectedSymbol 
-    ? new Set(filteredAlerts.map(a => a.trader_id)).size 
-    : activeInvestigation.suspicious_traders
-
   // ─── No Investigation State ─────────────────────────────────────────────────
 
   if (!activeInvestigation) {
@@ -178,6 +167,17 @@ export function DashboardPage() {
   }
 
   // ─── Main Dashboard ─────────────────────────────────────────────────────────
+
+  // Dynamic counts for metrics and funnel
+  const dynTrades = selectedSymbol ? filteredTrades.length : activeInvestigation.total_trades
+  const dynAlerts = selectedSymbol ? filteredAlerts.length : activeInvestigation.total_alerts
+  const dynCases = selectedSymbol ? filteredCases.length : cases.length
+  const dynEscalated = selectedSymbol 
+    ? filteredCases.filter(c => c.status === 'Escalated').length 
+    : cases.filter(c => c.status === 'Escalated').length
+  const dynTraders = selectedSymbol 
+    ? new Set(filteredAlerts.map(a => a.trader_id)).size 
+    : activeInvestigation.suspicious_traders
 
   return (
     <div className="space-y-6">
