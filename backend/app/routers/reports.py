@@ -216,12 +216,15 @@ async def generate_investigation_dossier(
 
     top_symbols = {}
     alert_patterns = {}
+    top_traders = {}
     for a in alerts:
         top_symbols[a.symbol] = top_symbols.get(a.symbol, 0) + 1
         alert_patterns[a.pattern] = alert_patterns.get(a.pattern, 0) + 1
+        top_traders[a.trader_id] = top_traders.get(a.trader_id, 0) + 1
     # Sort symbols by alert count descending
     top_symbols = dict(sorted(top_symbols.items(), key=lambda item: item[1], reverse=True))
     alert_patterns = dict(sorted(alert_patterns.items(), key=lambda item: item[1], reverse=True))
+    top_traders = dict(sorted(top_traders.items(), key=lambda item: item[1], reverse=True))
 
     sorted_cases = sorted(cases, key=lambda c: c.risk_score, reverse=True)
     top_cases = [
@@ -236,6 +239,7 @@ async def generate_investigation_dossier(
         "escalated_cases": inv.escalated_cases,
         "top_symbols": top_symbols,
         "alert_patterns": alert_patterns,
+        "top_traders": top_traders,
         "top_cases": top_cases
     }
     

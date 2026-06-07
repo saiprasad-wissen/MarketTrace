@@ -96,9 +96,30 @@ async def dispatch_escalation(
                 if resp.status_code >= 400:
                     logger.error(f"Jira API Error {resp.status_code}: {resp.text}")
                 else:
-                    logger.info(f"Successfully created Jira ticket for {case_ref}")
+                    jira_key = resp.json().get("key")
+                    logger.info(f"Successfully created Jira ticket {jira_key} for {case_ref}")
+                    if jira_key:
+                        from app.models.case import Case
+                        async with AsyncSessionLocal() as session:
+                            case_result = await session.execute(select(Case).where(Case.case_ref == case_ref))
+                            case_obj = case_result.scalar_one_or_none()
+                            if case_obj:
+                                case_obj.assigned_to = jira_key
+                                await session.commit()
         except Exception as e:
             logger.error(f"Jira integration failed: {e}")
+    else:
+        # Mock Fallback for Demonstration / Hackathon if Jira is not configured
+        import random
+        mock_jira_key = f"{jira_project_id}-{random.randint(1000, 9999)}"
+        logger.info(f"Jira not configured. Generated mock Jira ticket {mock_jira_key} for {case_ref}")
+        from app.models.case import Case
+        async with AsyncSessionLocal() as session:
+            case_result = await session.execute(select(Case).where(Case.case_ref == case_ref))
+            case_obj = case_result.scalar_one_or_none()
+            if case_obj:
+                case_obj.assigned_to = mock_jira_key
+                await session.commit()
             
     # 3. Slack
     if slack_bot_key:
@@ -144,10 +165,14 @@ Please review this case immediately in the MarketTrace portal.
             msg["From"] = smtp_user
             msg["To"] = smtp_recipient
             
-            with smtplib.SMTP(smtp_host, smtp_port) as server:
-                server.starttls()
-                server.login(smtp_user, smtp_pass)
-                server.send_message(msg)
-                logger.info(f"Successfully sent email for {case_ref}")
+            def send_email_sync():
+                with smtplib.SMTP(smtp_host, smtp_port, timeout=5) as server:
+                    server.starttls()
+                    server.login(smtp_user, smtp_pass)
+                    server.send_message(msg)
+            
+            import asyncio
+            await asyncio.to_thread(send_email_sync)
+            logger.info(f"Successfully sent email for {case_ref}")
         except Exception as e:
             logger.error(f"SMTP Email failed: {e}")
