@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { Activity, Mail, Lock, ArrowRight, Eye, EyeOff } from 'lucide-react'
 import { motion } from 'framer-motion'
+import { LogoIcon } from '@/components/ui/LogoIcon'
 import { useAuthStore } from '@/store/useAuthStore'
 import { authApi } from '@/services/api'
 
@@ -39,7 +40,7 @@ export function LoginPage() {
     <div className="flex-1 flex items-center justify-center bg-slate-900 py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
       {/* Dynamic Background with SVG Pattern */}
       <div className="absolute inset-0 z-0">
-        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20" />
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E')] opacity-20" />
         <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-primary-600/30 blur-[120px] animate-pulse" />
         <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full bg-indigo-600/30 blur-[120px] animate-pulse" style={{ animationDelay: '2s' }} />
         <div className="absolute top-[20%] right-[20%] w-[30%] h-[30%] rounded-full bg-purple-600/20 blur-[100px] animate-pulse" style={{ animationDelay: '1s' }} />
@@ -55,13 +56,9 @@ export function LoginPage() {
         <div className="absolute inset-0 rounded-[2rem] shadow-[inset_0_0_80px_rgba(255,255,255,0.02)] pointer-events-none" />
         
         <div className="relative z-10 text-center">
-          <motion.div 
-            whileHover={{ rotate: 180 }}
-            transition={{ duration: 0.5 }}
-            className="mx-auto h-12 w-12 bg-gradient-to-br from-primary-500 to-indigo-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-primary-500/30"
-          >
-            <Activity className="h-6 w-6 text-white" />
-          </motion.div>
+          <div className="flex justify-center mb-6">
+            <LogoIcon className="w-14 h-14" />
+          </div>
           <h2 className="text-3xl font-extrabold text-white tracking-tight">Welcome back</h2>
           <p className="mt-3 text-sm text-slate-400">
             Sign in to your MarketTrace account

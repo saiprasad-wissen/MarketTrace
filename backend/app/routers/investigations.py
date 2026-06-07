@@ -178,11 +178,11 @@ async def _run_engine_task(inv_id: uuid.UUID):
     
     async with AsyncSessionLocal() as db:
         try:
-            # Fetch investigation to get user_id
+            # Fetch user_id for multi-tenant isolation
             inv_result = await db.execute(select(Investigation).where(Investigation.id == inv_id))
-            inv_obj = inv_result.scalar_one_or_none()
-            user_id = inv_obj.user_id if inv_obj else ""
-
+            inv = inv_result.scalar_one_or_none()
+            if not inv: return
+            user_id = str(inv.user_id)
             # Load trades
             trades_result = await db.execute(
                 select(Trade).where(Trade.investigation_id == inv_id).order_by(Trade.sequence_num)

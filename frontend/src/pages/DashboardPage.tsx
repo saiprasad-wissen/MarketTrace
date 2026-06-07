@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { RefreshCw, Zap, Bot, Sparkles } from 'lucide-react'
+import { LogoIcon } from '@/components/ui/LogoIcon'
 import { useAppStore } from '@/store/useAppStore'
 import { cn } from '@/lib/utils'
 import { investigationsApi, alertsApi, casesApi, tradesApi, profilesApi } from '@/services/api'
@@ -74,18 +75,25 @@ export function DashboardPage() {
         ])
 
         setTrades(tradeData)
-        setAlerts(alertData)  // Also computes trader risk summaries in store
+        setAlerts(alertData)
         setCases(caseData)
         setContextEvents(contextData)
         setAvailableSymbols(symbolData)
 
-        // Load profile traders for enrichment
         if (activeInvestigation.profile_id) {
-          const profile = await profilesApi.get(activeInvestigation.profile_id)
-          setProfileTraders(profile.traders || [])
+          try {
+            const profile = await profilesApi.get(activeInvestigation.profile_id)
+            setProfileTraders(profile.traders || [])
+          } catch (e) {
+            console.error("Failed to load profile for enrichment", e)
+          }
         }
-      } finally {
-        // finished
+      } catch (err: any) {
+        console.error("Failed to load investigation data:", err)
+        // If 404 or 403, the investigation likely belongs to someone else or was deleted.
+        if (err?.response?.status === 404 || err?.response?.status === 403) {
+            useAppStore.getState().setActiveInvestigation(null)
+        }
       }
     }
 
@@ -124,10 +132,7 @@ export function DashboardPage() {
             transition={{ duration: 0.4 }}
             className="text-center max-w-md">
 
-            <div className="w-20 h-20 bg-gradient-to-br from-primary-500 to-violet-600 rounded-3xl 
-                            flex items-center justify-center mx-auto mb-6 shadow-elevated">
-              <Zap className="w-10 h-10 text-white" />
-            </div>
+            <LogoIcon className="w-20 h-20 mx-auto mb-6 shadow-elevated" />
 
             <h1 className="text-3xl font-bold text-slate-900 mb-2">Welcome to MarketTrace</h1>
             <p className="text-slate-500 mb-2 font-medium">AI-Powered Trade Surveillance & Investigation Workbench</p>
@@ -208,8 +213,9 @@ export function DashboardPage() {
           </button>
           <button
             onClick={() => openReplay(filteredTrades, filteredAlerts, filteredContextEvents)}
-            className="btn-secondary text-xs gap-1.5">
-            <Zap className="w-3.5 h-3.5 text-amber-500" /> Replay
+            disabled={filteredTrades.length === 0 && filteredContextEvents.length === 0}
+            className="btn-secondary text-xs gap-1.5 disabled:opacity-50">
+            <Zap className={cn("w-3.5 h-3.5", (filteredTrades.length > 0 || filteredContextEvents.length > 0) ? "text-amber-500" : "text-slate-500")} /> Replay
           </button>
           <button
             onClick={() => { setAIContext('investigation', null); setAIPanelOpen(true) }}

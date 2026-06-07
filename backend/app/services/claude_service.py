@@ -27,6 +27,7 @@ async def _log_usage(db: AsyncSession, model_name: str, input_tokens: int, outpu
     usage = TokenUsage(
         user_id=user_id,
         model_name=model_name,
+        user_id=user_id,
         input_tokens=input_tokens,
         output_tokens=output_tokens,
         total_cost=cost
@@ -133,7 +134,7 @@ EXPECTED OUTPUT FORMAT (RAW JSON ONLY):
         )
         
         content = response.content[0].text
-        await _log_usage(db, "claude-sonnet-4-20250514", response.usage.input_tokens, response.usage.output_tokens, user_id)
+        await _log_usage(db, "claude-3.5-sonnet", response.usage.input_tokens, response.usage.output_tokens, user_id)
         
         import re
         json_match = re.search(r'\{.*\}', content.strip(), re.DOTALL)
@@ -260,7 +261,7 @@ CRITICAL INSTRUCTIONS:
         content = response.content[0].text
         
         # Log token usage
-        await _log_usage(db, "claude-sonnet-4-20250514", response.usage.input_tokens, response.usage.output_tokens, user_id)
+        await _log_usage(db, "claude-3.5-sonnet", response.usage.input_tokens, response.usage.output_tokens, user_id)
         
         return content
     except Exception as e:

@@ -14,7 +14,6 @@ export function ReplayEngine() {
 
   const eventListRef = useRef<HTMLDivElement>(null)
   const alertListRef = useRef<HTMLDivElement>(null)
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const [drawerHeight, setDrawerHeight] = useState(250)
   const [hoveredAlert, setHoveredAlert] = useState<string | null>(null)
   const [selectedAlerts, setSelectedAlerts] = useState<string[]>([])
@@ -40,7 +39,7 @@ export function ReplayEngine() {
       + "Timestamp,Type,Side,Symbol,Quantity,Price,Status,Trader\n"
       + relatedTrades.map(e => {
         const ev = e as any;
-        return `${e.timestamp},${e.type},${ev.side},${ev.symbol},${ev.quantity},${ev.price},${e.status},${ev.trader_id}`;
+        return `${e.timestamp},${e.type},${ev.side},${ev.symbol},${ev.quantity},${ev.price},${ev.status},${ev.trader_id}`;
       }).join("\n");
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
@@ -81,13 +80,13 @@ export function ReplayEngine() {
 
   // Tick interval
   useEffect(() => {
-    if (intervalRef.current) clearInterval(intervalRef.current)
-    if (isPlaying) {
-      // Allowed minimum delay lowered to 10ms so 10x and 20x speeds actually work.
-      const ms = Math.max(10, Math.round(200 / speed))
-      intervalRef.current = setInterval(tick, ms)
-    }
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current) }
+    if (!isPlaying) return
+    
+    // Allowed minimum delay lowered to 10ms so 10x and 20x speeds actually work.
+    const ms = Math.max(10, Math.round(200 / speed))
+    const intervalId = setInterval(tick, ms)
+    
+    return () => clearInterval(intervalId)
   }, [isPlaying, speed, tick])
 
   // Auto-scroll event list
@@ -168,17 +167,16 @@ export function ReplayEngine() {
 
           <div className="w-px h-4 bg-slate-700" />
 
-          {!isPlaying ? (
-            <button onClick={play} disabled={isDone}
-              className="p-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white disabled:opacity-40 transition-colors">
-              <Play className="w-4 h-4" />
-            </button>
-          ) : (
-            <button onClick={pause}
-              className="p-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white transition-colors">
-              <Pause className="w-4 h-4" />
-            </button>
-          )}
+          <button onClick={play} disabled={isPlaying || isDone || events.length === 0}
+            className="p-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white disabled:opacity-40 transition-colors"
+            title="Play">
+            <Play className="w-4 h-4" />
+          </button>
+          <button onClick={pause} disabled={!isPlaying}
+            className="p-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white disabled:opacity-40 transition-colors"
+            title="Pause">
+            <Pause className="w-4 h-4" />
+          </button>
           <button onClick={stop}
             className="p-1.5 rounded-lg bg-slate-600 hover:bg-slate-500 text-white transition-colors">
             <Square className="w-4 h-4" />
@@ -227,8 +225,8 @@ export function ReplayEngine() {
                     isDimmed ? 'opacity-20' : 'opacity-100',
                     isHighlighted ? highlightClass : '',
                     e.type === 'CONTEXT' && !isHighlighted ? 'bg-amber-900/40 text-amber-300 border border-amber-700/50 shadow-[0_0_15px_rgba(251,191,36,0.15)] my-1' :
-                    e.status === 'CANCEL' && !isHighlighted ? 'text-red-400'   :
-                    e.status === 'EXECUTE' && !isHighlighted ? 'text-green-400' : 
+                    (e.type === 'TRADE' && e.status === 'CANCEL') && !isHighlighted ? 'text-red-400'   :
+                    (e.type === 'TRADE' && e.status === 'EXECUTE') && !isHighlighted ? 'text-green-400' : 
                     !isHighlighted ? 'text-slate-400' : ''
                   )}>
                   <span className={cn("w-14 shrink-0", isHighlighted ? "text-white/80" : "text-slate-500")}>{e.timestamp}</span>

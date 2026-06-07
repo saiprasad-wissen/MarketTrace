@@ -12,10 +12,12 @@ In modern financial markets, identifying manipulative trading behavior (such as 
 
 ## ✨ Key Features
 - **Deterministic Pattern Detection:** Instantly flags Spoofing, Quote Stuffing, Momentum Ignition, Pump & Dump, Wash Trading, Layering, and Close Manipulation.
-- **AI Forensic Investigator:** Utilizes Claude 3.5 Sonnet (with Llama 3.3 fallback) to construct step-by-step, data-driven reasoning trees for every flagged case.
+- **AI Forensic Investigator:** Utilizes Claude 3.5 Sonnet (with fast Llama 3.3/Groq fallback) to construct step-by-step, data-driven reasoning trees for every flagged case.
 - **Live Market Replay:** A high-octane simulation engine that chronologically plays back trades interleaved with glowing "Market Context" news events to prove intent.
 - **Trader Risk Heatmaps & Network Graphs:** Identify coordinated cross-market manipulation rings visually.
-- **Investigation Funnel:** Seamlessly tracks raw trades → alerts → cases → escalations.
+- **Multi-Tenant Architecture:** Secure user authentication and complete isolation of profiles, investigations, and token metrics across different organizational accounts.
+- **Automated Workflow Integrations:** Automatically dispatches critical risk alerts via Email (SMTP with SSL fallback), Jira tickets, and Slack notifications to compliance channels.
+- **Real-Time Token Auditing:** Transparent tracking of LLM API costs, input/output tokens, and model usage per user.
 - **Exportable Compliance Reports:** 1-click PDF generation for regulators and external audits.
 
 ## 🔄 System Flow Architecture

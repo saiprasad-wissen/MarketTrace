@@ -36,7 +36,7 @@ async def list_profiles(db: AsyncSession = Depends(get_db), current_user: User =
 
 @router.post("", response_model=ProfileListResponse)
 async def create_profile(data: ProfileCreate, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
-    profile = Profile(user_id=current_user.id, name=data.name, description=data.description)
+    profile = Profile(name=data.name, description=data.description, user_id=current_user.id)
     db.add(profile)
     await db.flush()
     await db.refresh(profile)
@@ -62,7 +62,7 @@ async def get_profile(profile_id: uuid.UUID, db: AsyncSession = Depends(get_db),
     )
 
 
-@router.put("/{profile_id}", response_model=MessageResponse)
+@router.put("/{profile_id}", response_model=ProfileListResponse)
 async def update_profile(profile_id: uuid.UUID, data: ProfileUpdate, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
     result = await db.execute(select(Profile).where(Profile.id == profile_id, Profile.user_id == current_user.id))
     profile = result.scalar_one_or_none()
