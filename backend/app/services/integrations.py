@@ -41,14 +41,14 @@ async def dispatch_escalation(
     groq_api_key = await get_db_setting("groq_api_key")
     
     # 1. Use Groq to generate a description
-    prompt = f"Write a professional, concise Jira ticket description for an escalated trade surveillance case.\nCase Ref: {case_ref}\nTrader: {trader_id}\nRisk Score: {risk_score}\nPatterns: {patterns}\nEvidence: {evidence}\nKeep it under 3 paragraphs, boardroom-ready."
+    prompt = f"Write a professional, concise executive summary for an escalated trade surveillance case.\nCase Ref: {case_ref}\nTrader: {trader_id}\nRisk Score: {risk_score}\nPatterns: {patterns}\nEvidence: {evidence}\nKeep it under 3 paragraphs, boardroom-ready. Do not use markdown."
     
     try:
         description = await ask_groq(prompt, [], {"groq_api_key": groq_api_key})
         logger.info("Successfully generated Groq description for escalation.")
     except Exception as e:
         logger.error(f"Failed to generate Groq description: {e}")
-        description = f"Escalated Case: {case_ref}\nTrader: {trader_id}\nPatterns: {patterns}\nEvidence: {evidence}"
+        description = f"Automated summary unavailable. Review the case details in MarketTrace."
 
     # 2. Jira
     if atlassian_secret and atlassian_endpoint:
@@ -68,11 +68,21 @@ async def dispatch_escalation(
                     json={
                         "fields": {
                             "project": {"key": jira_project_id},
-                            "summary": f"Escalated manually at MarketTrace: {trader_id} ({patterns})",
+                            "summary": f"🚨 Escalated Investigation: {trader_id} - {patterns}",
                             "description": {
                                 "type": "doc",
                                 "version": 1,
                                 "content": [
+                                    {
+                                        "type": "panel",
+                                        "attrs": {"panelType": "error"},
+                                        "content": [
+                                            {
+                                                "type": "paragraph",
+                                                "content": [{"type": "text", "text": f"Case Ref: {case_ref} | Risk Score: {risk_score}"}]
+                                            }
+                                        ]
+                                    },
                                     {
                                         "type": "paragraph",
                                         "content": [{"type": "text", "text": description}]
@@ -99,7 +109,7 @@ async def dispatch_escalation(
                     headers={"Authorization": f"Bearer {slack_bot_key}"},
                     json={
                         "channel": slack_channel,
-                        "text": f"🚨 *Escalated manually at MarketTrace: {case_ref}*\n*Trader:* {trader_id}\n*Patterns:* {patterns}\n*Risk:* {risk_score}\n\n*Summary:*\n{description}"
+                        "text": f"🚨 *Escalated Case: {case_ref}*\n*Trader:* `{trader_id}`\n*Patterns:* {patterns}\n*Risk Score:* `{risk_score}`\n\n*AI Executive Summary:*\n> {description.replace(chr(10), chr(10) + '> ')}"
                     }
                 )
                 if resp.status_code >= 400 or not resp.json().get("ok"):
@@ -113,8 +123,24 @@ async def dispatch_escalation(
     if smtp_host and smtp_user and smtp_pass and smtp_recipient:
         try:
             msg = EmailMessage()
-            msg.set_content(f"Escalated manually at MarketTrace\n\nCase Ref: {case_ref}\nTrader: {trader_id}\nPatterns: {patterns}\nRisk Score: {risk_score}\n\nAI Summary:\n{description}")
-            msg["Subject"] = f"Urgent: Escalated manually at MarketTrace - {trader_id}"
+            
+            body = f"""URGENT: Escalated Surveillance Case
+
+CASE REF: {case_ref}
+TRADER ID: {trader_id}
+RISK SCORE: {risk_score}
+PATTERNS DETECTED: {patterns}
+
+--------------------------------------------------
+EXECUTIVE SUMMARY
+--------------------------------------------------
+{description}
+
+--------------------------------------------------
+Please review this case immediately in the MarketTrace portal.
+"""
+            msg.set_content(body)
+            msg["Subject"] = f"🚨 Escalated Case: {trader_id} - {patterns}"
             msg["From"] = smtp_user
             msg["To"] = smtp_recipient
             

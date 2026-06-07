@@ -6,6 +6,32 @@ import { Search, Globe, TrendingUp, X } from 'lucide-react'
 
 export function Header() {
   const { activeInvestigation, selectedSymbol, setSelectedSymbol, availableSymbols, toggleAIPanel, aiPanelOpen } = useAppStore()
+  const [isExporting, setIsExporting] = useState(false)
+
+  const handleExportPdf = async () => {
+    if (!activeInvestigation) return
+    setIsExporting(true)
+    try {
+      // Direct fetch to backend to get the PDF blob
+      const response = await fetch(`http://localhost:8000/api/reports/investigation-dossier?investigation_id=${activeInvestigation.id}`)
+      if (!response.ok) throw new Error('Failed to generate report')
+      
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `Market_Report_${activeInvestigation.name.replace(/ /g, '_')}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      window.URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error(err)
+      alert("Failed to export PDF.")
+    } finally {
+      setIsExporting(false)
+    }
+  }
 
   return (
     <header
@@ -64,10 +90,11 @@ export function Header() {
       <div className="flex items-center gap-2 shrink-0">
         {activeInvestigation?.status === 'ready' && (
           <button
-            onClick={() => window.print()}
-            className="btn-secondary text-xs gap-1.5 py-1.5">
-            <Download className="w-3.5 h-3.5" />
-            Export PDF
+            onClick={handleExportPdf}
+            disabled={isExporting}
+            className="btn-secondary text-xs gap-1.5 py-1.5 min-w-[100px] justify-center">
+            {isExporting ? <div className="spinner w-3.5 h-3.5 border-slate-400 border-t-slate-600" /> : <Download className="w-3.5 h-3.5" />}
+            {isExporting ? 'Generating...' : 'Export PDF'}
           </button>
         )}
 

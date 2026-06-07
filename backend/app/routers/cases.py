@@ -101,6 +101,23 @@ async def update_case(case_id: uuid.UUID, data: CaseUpdate, db: AsyncSession = D
     if data.priority:
         case.priority = data.priority
 
+    await db.flush()
+
+    if data.status:
+        from sqlalchemy import func
+        escalated_count = await db.execute(
+            select(func.count(Case.id)).where(
+                Case.investigation_id == case.investigation_id, 
+                Case.status == "Escalated"
+            )
+        )
+        inv = await db.execute(select(Investigation).where(Investigation.id == case.investigation_id))
+        inv_obj = inv.scalar_one_or_none()
+        if inv_obj:
+            inv_obj.escalated_cases = escalated_count.scalar()
+
+    await db.commit()
+
     return MessageResponse(message="Case updated")
 
 

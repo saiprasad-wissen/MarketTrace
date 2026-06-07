@@ -449,7 +449,7 @@ const FUNNEL_STAGES_META = [
     label: 'Escalated',
     color: '#7f1d1d',
     iconBg: '#fef2f2',
-    desc: 'Escalated for enforcement',
+    desc: 'for enforcement',
     Icon: ArrowUpRight,
   },
 ]

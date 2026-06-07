@@ -192,3 +192,60 @@ async def generate_dossier(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.get("/investigation-dossier", response_class=FileResponse)
+async def generate_investigation_dossier(
+    investigation_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db)
+):
+    from app.services.pdf_generator import generate_investigation_pdf
+    
+    result = await db.execute(select(AppSettings).where(AppSettings.key == "groq_api_key"))
+    row = result.scalar_one_or_none()
+    groq_api_key = row.value if row else None
+    
+    if not groq_api_key:
+        raise HTTPException(status_code=400, detail="Groq API key is not configured in settings.")
+        
+    inv_result = await db.execute(select(Investigation).where(Investigation.id == investigation_id))
+    inv = inv_result.scalar_one_or_none()
+    if not inv:
+        raise HTTPException(status_code=404, detail="Investigation not found")
+
+    alerts = (await db.execute(select(Alert).where(Alert.investigation_id == investigation_id))).scalars().all()
+    cases = (await db.execute(select(Case).where(Case.investigation_id == investigation_id))).scalars().all()
+
+    top_symbols = {}
+    alert_patterns = {}
+    for a in alerts:
+        top_symbols[a.symbol] = top_symbols.get(a.symbol, 0) + 1
+        alert_patterns[a.pattern] = alert_patterns.get(a.pattern, 0) + 1
+    # Sort symbols by alert count descending
+    top_symbols = dict(sorted(top_symbols.items(), key=lambda item: item[1], reverse=True))
+    alert_patterns = dict(sorted(alert_patterns.items(), key=lambda item: item[1], reverse=True))
+
+    sorted_cases = sorted(cases, key=lambda c: c.risk_score, reverse=True)
+    top_cases = [
+        {"case_ref": c.case_ref, "trader_id": c.trader_id, "risk_score": c.risk_score, "status": c.status}
+        for c in sorted_cases
+    ]
+
+    data = {
+        "total_trades": inv.total_trades,
+        "total_alerts": inv.total_alerts,
+        "total_cases": inv.total_cases,
+        "escalated_cases": inv.escalated_cases,
+        "top_symbols": top_symbols,
+        "alert_patterns": alert_patterns,
+        "top_cases": top_cases
+    }
+    
+    try:
+        pdf_path = await generate_investigation_pdf(inv.name, data, groq_api_key)
+        return FileResponse(
+            path=pdf_path,
+            filename=f"Market_Report_{inv.name.replace(' ', '_')}.pdf",
+            media_type="application/pdf"
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
