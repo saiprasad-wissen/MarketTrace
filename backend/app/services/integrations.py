@@ -165,10 +165,14 @@ Please review this case immediately in the MarketTrace portal.
             msg["From"] = smtp_user
             msg["To"] = smtp_recipient
             
-            with smtplib.SMTP(smtp_host, smtp_port) as server:
-                server.starttls()
-                server.login(smtp_user, smtp_pass)
-                server.send_message(msg)
-                logger.info(f"Successfully sent email for {case_ref}")
+            def send_email_sync():
+                with smtplib.SMTP(smtp_host, smtp_port, timeout=5) as server:
+                    server.starttls()
+                    server.login(smtp_user, smtp_pass)
+                    server.send_message(msg)
+            
+            import asyncio
+            await asyncio.to_thread(send_email_sync)
+            logger.info(f"Successfully sent email for {case_ref}")
         except Exception as e:
             logger.error(f"SMTP Email failed: {e}")

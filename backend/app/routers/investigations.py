@@ -213,6 +213,12 @@ async def _run_engine_task(inv_id: uuid.UUID):
             escalation_tasks = []
             for case_data in cases_data:
                 db.add(Case(investigation_id=inv_id, **case_data))
+                
+            # Persist first so cases have IDs and can be queried by integrations
+            await db.commit()
+
+            escalation_tasks = []
+            for case_data in cases_data:
                 if case_data["status"] == "Escalated":
                     # We trigger the integrations in the background
                     escalation_tasks.append(
@@ -227,9 +233,6 @@ async def _run_engine_task(inv_id: uuid.UUID):
 
             if escalation_tasks:
                 await asyncio.gather(*escalation_tasks)
-
-            # Persist first so cases have IDs
-            await db.commit()
 
             # Refetch cases for AI generation
             saved_cases = (await db.execute(select(Case).where(Case.investigation_id == inv_id))).scalars().all()
