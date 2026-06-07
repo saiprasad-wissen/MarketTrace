@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { Activity, Mail, Lock, User, Briefcase, ArrowRight, Eye, EyeOff } from 'lucide-react'
 import { motion } from 'framer-motion'
+import { LogoIcon } from '@/components/ui/LogoIcon'
 import { useAuthStore } from '@/store/useAuthStore'
 import { authApi } from '@/services/api'
 
@@ -56,13 +57,9 @@ export function RegisterPage() {
         <div className="absolute inset-0 rounded-[2.5rem] shadow-[inset_0_0_80px_rgba(255,255,255,0.02)] pointer-events-none" />
         
         <div className="relative z-10 text-center">
-          <motion.div 
-            whileHover={{ rotate: 180 }}
-            transition={{ duration: 0.5 }}
-            className="mx-auto h-14 w-14 bg-gradient-to-br from-primary-500 to-indigo-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-primary-500/30"
-          >
-            <Activity className="h-7 w-7 text-white" />
-          </motion.div>
+          <div className="flex justify-center mb-6">
+            <LogoIcon className="w-14 h-14" />
+          </div>
           <h2 className="text-3xl font-extrabold text-white tracking-tight">Create account</h2>
           <p className="mt-3 text-sm text-slate-400">
             Join MarketTrace and secure your enterprise

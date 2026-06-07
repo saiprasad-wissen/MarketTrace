@@ -1,4 +1,5 @@
-import { NavLink, useNavigate } from 'react-router-dom'
+import { NavLink, useNavigate, useLocation } from 'react-router-dom'
+import { LogoIcon } from '@/components/ui/LogoIcon'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   LayoutDashboard, Search, FolderOpen, ClipboardList,
@@ -70,9 +71,7 @@ export function Sidebar() {
         {/* Brand */}
         <div className="px-4 py-5 border-b border-white/10">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center shadow-lg">
-              <AlertTriangle className="w-4 h-4 text-white" />
-            </div>
+            <LogoIcon className="w-8 h-8" />
             <div>
               <span className="font-bold text-white text-sm tracking-wide">MarketTrace</span>
               <p className="text-white/40 text-[10px] font-medium uppercase tracking-widest">Surveillance</p>

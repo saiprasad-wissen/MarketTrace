@@ -40,7 +40,7 @@ export function ReplayEngine() {
       + "Timestamp,Type,Side,Symbol,Quantity,Price,Status,Trader\n"
       + relatedTrades.map(e => {
         const ev = e as any;
-        return `${e.timestamp},${e.type},${ev.side},${ev.symbol},${ev.quantity},${ev.price},${e.status},${ev.trader_id}`;
+        return `${e.timestamp},${e.type},${ev.side},${ev.symbol},${ev.quantity},${ev.price},${ev.status},${ev.trader_id}`;
       }).join("\n");
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
@@ -227,8 +227,8 @@ export function ReplayEngine() {
                     isDimmed ? 'opacity-20' : 'opacity-100',
                     isHighlighted ? highlightClass : '',
                     e.type === 'CONTEXT' && !isHighlighted ? 'bg-amber-900/40 text-amber-300 border border-amber-700/50 shadow-[0_0_15px_rgba(251,191,36,0.15)] my-1' :
-                    e.status === 'CANCEL' && !isHighlighted ? 'text-red-400'   :
-                    e.status === 'EXECUTE' && !isHighlighted ? 'text-green-400' : 
+                    (e.type === 'TRADE' && e.status === 'CANCEL') && !isHighlighted ? 'text-red-400'   :
+                    (e.type === 'TRADE' && e.status === 'EXECUTE') && !isHighlighted ? 'text-green-400' : 
                     !isHighlighted ? 'text-slate-400' : ''
                   )}>
                   <span className={cn("w-14 shrink-0", isHighlighted ? "text-white/80" : "text-slate-500")}>{e.timestamp}</span>

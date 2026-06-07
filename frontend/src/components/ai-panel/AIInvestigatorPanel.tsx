@@ -103,6 +103,23 @@ export function AIInvestigatorPanel() {
 
           </div>
 
+          {/* Pinned Context Banner */}
+          {aiContextId && (
+            <div className="bg-slate-50 border-b border-slate-200 px-4 py-2 flex items-center justify-between">
+              <div className="flex items-center gap-2 text-xs text-slate-600 font-medium">
+                <div className="w-1.5 h-1.5 rounded-full bg-primary-500 animate-pulse" />
+                <span>Context: <strong className="text-slate-800">{aiContextId}</strong></span>
+              </div>
+              <button 
+                onClick={() => setAIContext(aiContextType, null)}
+                className="text-slate-400 hover:text-red-500 transition-colors"
+                title="Clear Context"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-4 space-y-3">
             {aiHistory.length === 0 && (
