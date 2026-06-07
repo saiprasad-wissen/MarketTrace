@@ -178,6 +178,11 @@ async def _run_engine_task(inv_id: uuid.UUID):
     
     async with AsyncSessionLocal() as db:
         try:
+            # Fetch user_id for multi-tenant isolation
+            inv_result = await db.execute(select(Investigation).where(Investigation.id == inv_id))
+            inv = inv_result.scalar_one_or_none()
+            if not inv: return
+            user_id = str(inv.user_id)
             # Load trades
             trades_result = await db.execute(
                 select(Trade).where(Trade.investigation_id == inv_id).order_by(Trade.sequence_num)
@@ -255,7 +260,8 @@ async def _run_engine_task(inv_id: uuid.UUID):
                             trader_id=case_data["trader_id"],
                             patterns=case_data["patterns"],
                             risk_score=case_data["risk_score"],
-                            evidence=case_data["evidence"]
+                            evidence=case_data["evidence"],
+                            user_id=user_id
                         )
                     )
 
@@ -280,7 +286,7 @@ async def _run_engine_task(inv_id: uuid.UUID):
             batch_size = 5
             for i in range(0, len(case_dicts), batch_size):
                 batch = case_dicts[i:i+batch_size]
-                reasoning_dict = await generate_batch_case_reasoning(batch, trade_rows, context_events, false_positive_alerts, db)
+                reasoning_dict = await generate_batch_case_reasoning(batch, trade_rows, context_events, false_positive_alerts, db, user_id)
                 
                 for c in saved_cases:
                     cid = str(c.id)

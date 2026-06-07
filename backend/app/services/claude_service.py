@@ -14,18 +14,19 @@ logger = logging.getLogger(__name__)
 CLAUDE_COST = {"input": 3.0, "output": 15.0}  # Claude 3.5 Sonnet
 GROQ_COST = {"input": 0.5, "output": 0.5}     # Llama 3.3
 
-async def _get_api_keys(db: AsyncSession) -> tuple[str | None, str | None]:
-    result = await db.execute(select(AppSettings).where(AppSettings.key.in_(["anthropic_api_key", "groq_api_key"])))
+async def _get_api_keys(db: AsyncSession, user_id: str) -> tuple[str | None, str | None]:
+    result = await db.execute(select(AppSettings).where(AppSettings.key.in_(["anthropic_api_key", "groq_api_key"]), AppSettings.user_id == user_id))
     rows = result.scalars().all()
     keys = {row.key: row.value.strip() if row.value else None for row in rows}
     return keys.get("anthropic_api_key"), keys.get("groq_api_key")
 
-async def _log_usage(db: AsyncSession, model_name: str, input_tokens: int, output_tokens: int):
+async def _log_usage(db: AsyncSession, model_name: str, input_tokens: int, output_tokens: int, user_id: str):
     cost_map = CLAUDE_COST if "claude" in model_name.lower() else GROQ_COST
     cost = (input_tokens / 1_000_000) * cost_map["input"] + (output_tokens / 1_000_000) * cost_map["output"]
     
     usage = TokenUsage(
         model_name=model_name,
+        user_id=user_id,
         input_tokens=input_tokens,
         output_tokens=output_tokens,
         total_cost=cost
@@ -38,13 +39,14 @@ async def generate_batch_case_reasoning(
     trades: List[Trade],
     context_events: List[ContextEvent],
     false_positive_alerts: List[Any],
-    db: AsyncSession
+    db: AsyncSession,
+    user_id: str
 ) -> Dict[str, str]:
     """
     Generate deep forensic reasoning for a batch of cases using Llama 3.3 (Groq).
     Returns a dict mapping case_id to a JSON string representation of the reasoning tree.
     """
-    anthropic_key, groq_key = await _get_api_keys(db)
+    anthropic_key, groq_key = await _get_api_keys(db, user_id)
     if not anthropic_key and not groq_key:
         logger.error("No API keys available for case batching.")
         return {c["case_id"]: json.dumps([{"step": "Configuration Error", "description": "No API keys configured in settings.", "risk_level": "High"}]) for c in cases_batch}
@@ -131,7 +133,7 @@ EXPECTED OUTPUT FORMAT (RAW JSON ONLY):
         )
         
         content = response.content[0].text
-        await _log_usage(db, "claude-3.5-sonnet", response.usage.input_tokens, response.usage.output_tokens)
+        await _log_usage(db, "claude-3.5-sonnet", response.usage.input_tokens, response.usage.output_tokens, user_id)
         
         import re
         json_match = re.search(r'\{.*\}', content.strip(), re.DOTALL)
@@ -173,7 +175,8 @@ EXPECTED OUTPUT FORMAT (RAW JSON ONLY):
                     db,
                     model_name="llama-3.3-70b-versatile",
                     input_tokens=data.get("usage", {}).get("prompt_tokens", 0),
-                    output_tokens=data.get("usage", {}).get("completion_tokens", 0)
+                    output_tokens=data.get("usage", {}).get("completion_tokens", 0),
+                    user_id=user_id
                 )
                 
                 content = data["choices"][0]["message"]["content"].strip()
@@ -202,12 +205,13 @@ async def generate_trader_profile_reasoning(
     trader_id: str,
     cases_summary: List[Dict[str, Any]],
     false_positive_alerts: List[Any],
-    db: AsyncSession
+    db: AsyncSession,
+    user_id: str
 ) -> str:
     """
     Generate an overarching Suspicious Trader Profile using Claude 3.5 Sonnet.
     """
-    anthropic_key, groq_key = await _get_api_keys(db)
+    anthropic_key, groq_key = await _get_api_keys(db, user_id)
     if not anthropic_key and not groq_key:
         return "No API keys configured for AI analysis."
 
@@ -256,7 +260,7 @@ CRITICAL INSTRUCTIONS:
         content = response.content[0].text
         
         # Log token usage
-        await _log_usage(db, "claude-3.5-sonnet", response.usage.input_tokens, response.usage.output_tokens)
+        await _log_usage(db, "claude-3.5-sonnet", response.usage.input_tokens, response.usage.output_tokens, user_id)
         
         return content
     except Exception as e:

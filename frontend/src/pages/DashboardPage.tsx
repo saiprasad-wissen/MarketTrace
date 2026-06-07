@@ -75,18 +75,25 @@ export function DashboardPage() {
         ])
 
         setTrades(tradeData)
-        setAlerts(alertData)  // Also computes trader risk summaries in store
+        setAlerts(alertData)
         setCases(caseData)
         setContextEvents(contextData)
         setAvailableSymbols(symbolData)
 
-        // Load profile traders for enrichment
         if (activeInvestigation.profile_id) {
-          const profile = await profilesApi.get(activeInvestigation.profile_id)
-          setProfileTraders(profile.traders || [])
+          try {
+            const profile = await profilesApi.get(activeInvestigation.profile_id)
+            setProfileTraders(profile.traders || [])
+          } catch (e) {
+            console.error("Failed to load profile for enrichment", e)
+          }
         }
-      } finally {
-        // finished
+      } catch (err: any) {
+        console.error("Failed to load investigation data:", err)
+        // If 404 or 403, the investigation likely belongs to someone else or was deleted.
+        if (err?.response?.status === 404 || err?.response?.status === 403) {
+            useAppStore.getState().setActiveInvestigation(null)
+        }
       }
     }
 
