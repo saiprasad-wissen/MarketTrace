@@ -13,7 +13,8 @@ export function Header() {
     setIsExporting(true)
     try {
       // Direct fetch to backend to get the PDF blob
-      const response = await fetch(`http://localhost:8000/api/reports/investigation-dossier?investigation_id=${activeInvestigation.id}`)
+      const baseUrl = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : '/api'
+      const response = await fetch(`${baseUrl}/reports/investigation-dossier?investigation_id=${activeInvestigation.id}`)
       if (!response.ok) throw new Error('Failed to generate report')
       
       const blob = await response.blob()
