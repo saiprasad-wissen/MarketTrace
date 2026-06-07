@@ -14,7 +14,6 @@ export function ReplayEngine() {
 
   const eventListRef = useRef<HTMLDivElement>(null)
   const alertListRef = useRef<HTMLDivElement>(null)
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const [drawerHeight, setDrawerHeight] = useState(250)
   const [hoveredAlert, setHoveredAlert] = useState<string | null>(null)
   const [selectedAlerts, setSelectedAlerts] = useState<string[]>([])
@@ -81,13 +80,13 @@ export function ReplayEngine() {
 
   // Tick interval
   useEffect(() => {
-    if (intervalRef.current) clearInterval(intervalRef.current)
-    if (isPlaying) {
-      // Allowed minimum delay lowered to 10ms so 10x and 20x speeds actually work.
-      const ms = Math.max(10, Math.round(200 / speed))
-      intervalRef.current = setInterval(tick, ms)
-    }
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current) }
+    if (!isPlaying) return
+    
+    // Allowed minimum delay lowered to 10ms so 10x and 20x speeds actually work.
+    const ms = Math.max(10, Math.round(200 / speed))
+    const intervalId = setInterval(tick, ms)
+    
+    return () => clearInterval(intervalId)
   }, [isPlaying, speed, tick])
 
   // Auto-scroll event list
