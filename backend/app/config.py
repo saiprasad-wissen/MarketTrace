@@ -1,6 +1,6 @@
 from pydantic_settings import BaseSettings
 from functools import lru_cache
-from typing import List
+from typing import List, Optional
 
 
 class Settings(BaseSettings):
@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "markettrace-super-secret-key"
     ENVIRONMENT: str = "development"
     CORS_ORIGINS: str = "http://localhost:5173,http://localhost:3000"
+    RENDER_EXTERNAL_URL: Optional[str] = None
     
     # SMTP Settings
     SMTP_SERVER: str = "smtp.gmail.com"
