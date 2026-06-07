@@ -115,7 +115,7 @@ EXPECTED OUTPUT FORMAT (RAW JSON ONLY):
         client = AsyncAnthropic(api_key=anthropic_key)
         
         response = await client.messages.create(
-            model="claude-3-5-sonnet-20241022",
+            model="claude-sonnet-4-20250514",
             max_tokens=4096,
             temperature=0.1,
             system="You are a forensic API that outputs ONLY valid JSON without any markdown formatting or wrapper.",
@@ -231,7 +231,7 @@ CRITICAL INSTRUCTIONS:
         client = AsyncAnthropic(api_key=anthropic_key)
         
         response = await client.messages.create(
-            model="claude-3-5-sonnet-20241022",
+            model="claude-sonnet-4-20250514",
             max_tokens=1024,
             temperature=0.2,
             system="You are an expert Forensic Market Surveillance Analyst.",
