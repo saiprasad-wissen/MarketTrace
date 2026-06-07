@@ -9,6 +9,7 @@ from app.models.ai import AIConversation
 from app.models.audit import AuditLog
 from app.models.settings import AppSettings
 from app.models.trader_analysis import TraderAnalysis
+from app.models.user import User
 
 __all__ = [
     "Profile", "ProfileStock", "ProfileTrader",
@@ -21,4 +22,5 @@ __all__ = [
     "AuditLog",
     "AppSettings",
     "TraderAnalysis",
+    "User",
 ]
