@@ -17,3 +17,5 @@ passlib[bcrypt]
 reportlab
 jinja2
 anthropic
+matplotlib
+
