@@ -2,13 +2,19 @@ import { cn } from '@/lib/utils'
 
 export function LogoIcon({ className }: { className?: string }) {
   return (
-    <div className={cn("relative flex items-center justify-center shrink-0 rounded-xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 shadow-[0_0_20px_rgba(168,85,247,0.4)] overflow-hidden", className)}>
-      <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E')] opacity-30 mix-blend-overlay"></div>
+    <div className={cn("relative flex items-center justify-center shrink-0 rounded-xl bg-gradient-to-br from-slate-800 to-slate-950 border border-slate-700/50 shadow-[0_0_20px_rgba(79,70,229,0.3)] overflow-hidden", className)}>
+      <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-30 mix-blend-overlay"></div>
       
-      {/* Custom MarketTrace Emblem */}
-      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-3/5 h-3/5 text-white relative z-10 drop-shadow-lg">
-        {/* Outer Shield/Hexagon */}
-        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      {/* Background Glow */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1/2 h-1/2 bg-primary-500 blur-xl opacity-40"></div>
+
+      {/* MarketTrace Emblem: Chart with Target Ring */}
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-3/5 h-3/5 text-indigo-400 relative z-10 drop-shadow-lg">
+        {/* Market Trend Line */}
+        <path d="M2 16l6-6 4 4 6-6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+        {/* Trace / Radar Target */}
+        <circle cx="18" cy="8" r="2" fill="currentColor" />
+        <circle cx="18" cy="8" r="5" stroke="currentColor" strokeWidth="1.5" strokeDasharray="2 2" className="animate-[spin_4s_linear_infinite]" />
       </svg>
     </div>
   )
